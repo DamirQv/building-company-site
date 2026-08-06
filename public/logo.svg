@@ -1,0 +1,11 @@
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="240" height="240" rx="120" fill="#0f172a"/>
+  <path d="M72 148V96L96 76L120 96V148" stroke="#FBBF24" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M132 148V104L156 84L180 104V148" stroke="#FBBF24" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M72 148H180" stroke="#FBBF24" stroke-width="12" stroke-linecap="round"/>
+  <path d="M84 124H108" stroke="#FBBF24" stroke-width="10" stroke-linecap="round"/>
+  <path d="M144 120H168" stroke="#FBBF24" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="120" cy="120" r="102" stroke="#38BDF8" stroke-width="8" opacity="0.35"/>
+  <text x="120" y="192" text-anchor="middle" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">Standard</text>
+  <text x="120" y="214" text-anchor="middle" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600">Stroy</text>
+</svg>

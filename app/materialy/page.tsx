@@ -31,11 +31,11 @@ const materials = [
 
 export default function MaterialyPage() {
   return (
-    <main className="min-h-screen bg-[#f8f9fa] px-6 py-24 text-zinc-800 sm:px-8 lg:px-12">
+    <main className="min-h-screen bg-blue-50 px-6 py-24 text-slate-900 sm:px-8 lg:px-12">
       <div className="mx-auto max-w-6xl">
-        <p className="text-sm uppercase tracking-[0.3em] text-orange-500">Материалы</p>
+        <p className="text-sm uppercase tracking-[0.3em] text-blue-700">Материалы</p>
         <h1 className="mt-4 text-4xl font-semibold sm:text-5xl">Из чего строить дом в Алматы</h1>
-        <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-600">
+        <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600">
           Выбор материала влияет на тепло, сейсмоустойчивость, скорость и цену дома.
           Поможем подобрать оптимальный вариант под ваш бюджет и климат.
         </p>
@@ -51,10 +51,10 @@ export default function MaterialyPage() {
               <p className="mt-3 text-sm leading-7 text-zinc-600">{mat.description}</p>
               <ul className="mt-4 space-y-1">
                 {mat.pros.map((pro) => (
-                  <li key={pro} className="text-xs text-zinc-500">• {pro}</li>
+                  <li key={pro} className="text-xs text-slate-500">• {pro}</li>
                 ))}
               </ul>
-              <p className="mt-4 text-sm text-orange-500 opacity-0 transition group-hover:opacity-100">
+              <p className="mt-4 text-sm text-blue-700 opacity-0 transition group-hover:opacity-100">
                 Подробнее →
               </p>
             </Link>

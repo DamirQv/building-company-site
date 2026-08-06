@@ -9,11 +9,11 @@ export const metadata: Metadata = {
 
 export default function BlogPage() {
   return (
-    <main className="min-h-screen bg-[#f8f9fa] px-6 py-24 text-zinc-800 sm:px-8 lg:px-12">
+    <main className="min-h-screen bg-blue-50 px-6 py-24 text-slate-900 sm:px-8 lg:px-12">
       <div className="mx-auto max-w-4xl">
-        <p className="text-sm uppercase tracking-[0.3em] text-orange-500">Блог</p>
+        <p className="text-sm uppercase tracking-[0.3em] text-blue-700">Блог</p>
         <h1 className="mt-4 text-4xl font-semibold sm:text-5xl">Блог о строительстве</h1>
-        <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-600">
+        <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600">
           Статьи о строительстве домов в Алматы: выбор материалов, этапы, разрешение на ИЖС,
           ипотека и новый Строительный кодекс РК.
         </p>

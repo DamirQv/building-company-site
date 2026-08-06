@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { collectTracking } from "@/lib/utm";
-import { trackLead, trackQuizStart } from "@/lib/analytics-events";
+import { trackLead, trackQuizStart, trackContact } from "@/lib/analytics-events";
 import { DEFAULT_PRICING, formatPrice, getPricingData, resolveMaterialPrice } from "@/lib/pricing";
 
 /**
@@ -41,7 +41,7 @@ const steps: Step[] = [
     title: "Что планируете строить?",
     options: [
       { value: "Дом", label: "Дом" },
-      { value: "Коттедж", label: "Коттедж" },
+      { value: "Коробка дома", label: "Коробка дома" },
       { value: "Коммерция", label: "Коммерческое здание" },
     ],
   },
@@ -88,7 +88,7 @@ const steps: Step[] = [
     key: "finish_level",
     title: "Уровень отделки?",
     options: [
-      { value: "Коробка", label: "Только коробка" },
+      { value: "Коробка дома", label: "Только коробка дома" },
       { value: "Предчистовая", label: "Предчистовая отделка" },
       { value: "Под ключ", label: "Под ключ" },
     ],
@@ -109,7 +109,7 @@ const steps: Step[] = [
     options: [
       { value: "Алматы", label: "Алматы" },
       { value: "Астана", label: "Астана" },
-      { value: "Пригород Алматы", label: "Пригород Алматы (Каскелен, Талгар, Иссык)" },
+      { value: "Пригород Алматы", label: "Пригород Алматы (Каскелен, Талгар)" },
       { value: "Другой", label: "Другой город" },
     ],
   },
@@ -122,7 +122,7 @@ const steps: Step[] = [
 ];
 
 const FINISH_FACTOR: Record<string, number> = {
-  Коробка: 0.6,
+  "Коробка дома": 0.6,
   Предчистовая: 0.8,
   "Под ключ": 1.0,
 };
@@ -272,21 +272,34 @@ export default function LeadQuiz() {
   // Экран успеха
   if (status === "success") {
     return (
-      <div className="rounded-[2rem] border border-zinc-800 bg-zinc-900 p-6 lg:p-8">
+      <div className="rounded-[2rem] border border-slate-200 bg-white p-6 lg:p-8 shadow-sm">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-[2rem] border border-amber-500/20 bg-zinc-950/80 p-6 text-center"
+          className="rounded-[2rem] border border-blue-200 bg-blue-50 p-6 text-center"
         >
-          <div className="text-3xl">✓</div>
-          <p className="mt-3 text-sm uppercase tracking-[0.35em] text-amber-400">Готово</p>
-          <h3 className="mt-3 text-2xl font-semibold text-white">Заявка принята!</h3>
-          <p className="mt-3 text-sm leading-7 text-zinc-400">
+          <div className="text-3xl text-blue-700">✓</div>
+          <p className="mt-3 text-sm uppercase tracking-[0.35em] text-blue-700">Готово</p>
+          <h3 className="mt-3 text-2xl font-semibold text-slate-900">Заявка принята!</h3>
+          <p className="mt-3 text-sm leading-7 text-slate-600">
             Мы рассчитаем точную смету под ваш участок и пришлём в WhatsApp.
             Если не ответим в течение 30 минут — проверьте спам.
           </p>
-          <div className="mt-6 inline-flex rounded-full bg-amber-500/10 px-4 py-2 text-sm text-amber-300">
+          <div className="mt-6 inline-flex rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-900">
             Базовая цена: {formatPrice(resolveMaterialPrice(answers.material, pricing))} · Ориентировочный диапазон: {formatKzt(estimate.min)}–{formatKzt(estimate.max)} ₸
+          </div>
+          <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <a
+              href={`https://wa.me/77770500803?text=${encodeURIComponent(
+                `Здравствуйте! Хочу продолжить заявку после квиза. Сайт Standard Stroy [S-QUIZ]`
+              )}`}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => trackContact("S-QUIZ-WHATSAPP")}
+              className="inline-flex rounded-full bg-blue-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-blue-800"
+            >
+              Перейти в WhatsApp
+            </a>
           </div>
         </motion.div>
       </div>
@@ -294,28 +307,28 @@ export default function LeadQuiz() {
   }
 
   return (
-    <div className="rounded-[2rem] border border-zinc-800 bg-zinc-900 p-6 lg:p-8">
+    <div className="rounded-[2rem] border border-slate-200 bg-white p-6 lg:p-8 shadow-sm">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm uppercase tracking-[0.35em] text-amber-400">Квиз-калькулятор</p>
-          <h3 className="mt-2 text-2xl font-semibold text-white">Рассчитайте стоимость дома</h3>
+          <p className="text-sm uppercase tracking-[0.35em] text-blue-700">Квиз-калькулятор</p>
+          <h3 className="mt-2 text-2xl font-semibold text-slate-900">Рассчитайте стоимость дома</h3>
         </div>
-        <div className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">
+        <div className="rounded-full border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">
           {step + 1}/{steps.length}
         </div>
       </div>
 
-      <div className="mt-6 h-2 rounded-full bg-zinc-800">
+      <div className="mt-6 h-2 rounded-full bg-slate-100">
         <div
-          className="h-2 rounded-full bg-amber-500 transition-all"
+          className="h-2 rounded-full bg-blue-900 transition-all"
           style={{ width: `${progress}%` }}
         />
       </div>
 
       <motion.div key={current.key} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-8">
-        <div className="text-lg font-medium text-white">{current.title}</div>
+        <div className="text-lg font-medium text-slate-900">{current.title}</div>
         {current.subtitle && (
-          <p className="mt-1 text-sm text-zinc-400">{current.subtitle}</p>
+          <p className="mt-1 text-sm text-slate-500">{current.subtitle}</p>
         )}
 
         {current.input ? (
@@ -323,28 +336,28 @@ export default function LeadQuiz() {
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-amber-500"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-700"
               placeholder="Ваше имя"
               disabled={status === "loading"}
             />
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-amber-500"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-700"
               placeholder="Ваш телефон"
               disabled={status === "loading"}
             />
-            <label className="flex items-start gap-3 text-xs leading-5 text-zinc-400">
+            <label className="flex items-start gap-3 text-xs leading-5 text-slate-500">
               <input
                 type="checkbox"
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-400"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-700 focus:ring-blue-700"
                 disabled={status === "loading"}
               />
               <span>
                 Я согласен на обработку персональных данных и принимаю{" "}
-                <Link href="/politika-konfidencialnosti" className="text-amber-400 underline">
+                <Link href="/politika-konfidencialnosti" className="text-blue-700 underline">
                   политику конфиденциальности
                 </Link>
                 .
@@ -360,8 +373,8 @@ export default function LeadQuiz() {
                 onClick={() => selectAnswer(option.value)}
                 className={`rounded-2xl border px-4 py-3 text-left text-sm transition ${
                   answers[current.key] === option.value
-                    ? "border-amber-500 bg-amber-500/10 text-amber-200"
-                    : "border-zinc-800 bg-zinc-950/70 text-zinc-300 hover:border-zinc-700"
+                    ? "border-blue-700 bg-blue-50 text-slate-900"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
                 }`}
               >
                 {option.label}
@@ -378,7 +391,7 @@ export default function LeadQuiz() {
             type="button"
             onClick={prev}
             disabled={step === 0 || status === "loading"}
-            className="rounded-full border border-zinc-700 px-4 py-2 text-sm text-zinc-300 disabled:opacity-40"
+            className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-700 disabled:opacity-40 hover:border-slate-300 transition"
           >
             Назад
           </button>
@@ -386,7 +399,7 @@ export default function LeadQuiz() {
             type="button"
             onClick={next}
             disabled={status === "loading"}
-            className="rounded-full bg-amber-500 px-5 py-2 text-sm font-medium text-zinc-950 disabled:opacity-60"
+            className="rounded-full bg-blue-900 px-5 py-2 text-sm font-medium text-white disabled:opacity-60 hover:bg-blue-800 transition"
           >
             {isLast ? (status === "loading" ? "Отправляем…" : "Получить расчёт") : "Далее"}
           </button>

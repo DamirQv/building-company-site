@@ -4,7 +4,7 @@ import { builtObjects } from "@/lib/content";
 export const metadata: Metadata = {
   title: "Построенные объекты — Standard Stroy, Алматы",
   description:
-    "Реальные дома, построенные Standard Stroy в Алматы, Каскелене, Талгаре, Иссыке. Фото, площадь, материал, срок, район. Без рендеров — только реальные фото.",
+    "Реальные дома, построенные Standard Stroy в Алматы, Каскелене и Талгаре. Фото, площадь, материал, срок, район. Без рендеров — только реальные фото.",
   alternates: { canonical: "/obekty" },
 };
 

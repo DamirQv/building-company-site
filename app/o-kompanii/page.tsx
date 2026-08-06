@@ -11,16 +11,16 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-[#f8f9fa] px-6 py-24 text-zinc-800 sm:px-8 lg:px-12">
+    <main className="min-h-screen bg-blue-50 px-6 py-24 text-slate-900 sm:px-8 lg:px-12">
       <div className="mx-auto max-w-5xl">
-        <p className="text-sm uppercase tracking-[0.3em] text-orange-500">О компании</p>
+        <p className="text-sm uppercase tracking-[0.3em] text-blue-700">О компании</p>
         <h1 className="mt-4 text-4xl font-semibold sm:text-5xl">Standard Stroy</h1>
-        <p className="mt-4 text-sm text-zinc-500">ТОО «Эко Дом Билдинг»</p>
+        <p className="mt-4 text-sm text-slate-500">ТОО «Эко Дом Билдинг»</p>
 
         <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-600">
           Мы строим дома в Алматы, Астане и пригородах уже более 15 лет.
           За это время сдали 320+ объектов — от компактных домов 100 м²
-          до коттеджей 240 м². Наш принцип: фиксированная смета, оплата по актам
+          до коробки дома 240 м². Наш принцип: фиксированная смета, оплата по актам
           и онлайн-камера на каждом объекте.
         </p>
 
@@ -65,7 +65,7 @@ export default function AboutPage() {
         </div>
 
         <div className="mt-8">
-          <Link href="/kontakty" className="inline-flex rounded-full bg-orange-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-orange-600">
+          <Link href="/kontakty" className="inline-flex rounded-full bg-blue-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-blue-800">
             Связаться с нами
           </Link>
         </div>

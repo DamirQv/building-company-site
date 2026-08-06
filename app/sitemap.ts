@@ -22,7 +22,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/obekty`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
     { url: `${baseUrl}/o-kompanii`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${baseUrl}/otzyvy`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
-    { url: `${baseUrl}/tseny`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/kontakty`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/astana`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/blog`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },

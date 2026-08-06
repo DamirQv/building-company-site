@@ -60,23 +60,23 @@ export function ConsultationModal() {
         onClick={handleClose}
       />
 
-      <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 transform rounded-[2rem] border border-zinc-200 bg-white p-8 shadow-2xl">
+      <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 transform rounded-[2rem] border border-slate-200 bg-white p-8 shadow-2xl">
         <button
           onClick={handleClose}
-          className="absolute right-4 top-4 text-zinc-400 hover:text-zinc-600"
+          className="absolute right-4 top-4 text-slate-400 hover:text-slate-600"
           aria-label="Закрыть"
         >
           ✕
         </button>
 
         <div className="text-center">
-          <p className="text-sm uppercase tracking-[0.3em] text-orange-500">
+          <p className="text-sm uppercase tracking-[0.3em] text-blue-700">
             Бесплатный выезд инженера
           </p>
-          <h2 className="mt-3 text-2xl font-semibold text-zinc-900">
+          <h2 className="mt-3 text-2xl font-semibold text-slate-900">
             Замер и консультация на участке — бесплатно
           </h2>
-          <p className="mt-4 text-sm leading-7 text-zinc-600">
+          <p className="mt-4 text-sm leading-7 text-slate-600">
             Оставьте телефон — инженер приедет на участок, замерит перепады,
             проверит грунт и даст рекомендации по фундаменту. Без обязательств.
           </p>
