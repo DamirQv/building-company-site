@@ -31,14 +31,14 @@ export default function ContactsPage() {
               <div className="mt-10 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-800">
                 <p className="font-semibold">Хотите расчёт дома?</p>
                 <p className="mt-2">
-                  Если вы хотите получить квиз-калькулятор и приблизительную смету,
+                  Если вы хотите рассчитать стоимость дома и получить приблизительную смету,
                   вернитесь на главную страницу и нажмите «Рассчитать стоимость моего дома».
                 </p>
                 <Link
                   href="/#quiz"
                   className="mt-4 inline-flex rounded-full bg-blue-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-blue-800"
                 >
-                  Открыть квиз на главной
+                  Рассчитать стоимость на главной
                 </Link>
               </div>
             </div>

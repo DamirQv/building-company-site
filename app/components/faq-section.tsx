@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { CallbackButton } from "./callback-button";
 
 type Faq = {
   question: string;
@@ -63,6 +64,10 @@ export function FaqSection({ items }: { items: Faq[] }) {
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-10 flex justify-center">
+          <CallbackButton source="faq" />
         </div>
       </div>
     </section>

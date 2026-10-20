@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { CallbackButton } from "./callback-button";
 
 export type ProcessStep = {
   step: string;
@@ -82,6 +83,10 @@ export function ProcessTimeline({ steps }: { steps: ProcessStep[] }) {
             </motion.li>
           ))}
         </ol>
+
+        <div className="mt-12 flex justify-center">
+          <CallbackButton source="process" />
+        </div>
       </motion.div>
     </section>
   );

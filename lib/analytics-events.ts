@@ -59,6 +59,11 @@ export function trackContact(source: string) {
   trackEvent("Contact", { source });
 }
 
+/** Событие Contact — клик по кнопке «Заказать обратный звонок» из конкретного блока. */
+export function trackCallbackClick(source: string) {
+  trackEvent("Contact", { source: `callback:${source}` });
+}
+
 /** Событие InitiateCheckout — открытие квиза. */
 export function trackQuizStart() {
   trackEvent("InitiateCheckout", {});

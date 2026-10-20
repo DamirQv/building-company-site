@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { LeadForm } from "./lead-form";
 
 /**
@@ -30,6 +31,7 @@ export function openCallbackModal() {
 }
 
 export function ConsultationModal() {
+  const pathname = usePathname();
   const [showExit, setShowExit] = useState(false);
   const [isExternalOpen, setIsExternalOpen] = useState(externalOpen);
 
@@ -46,6 +48,7 @@ export function ConsultationModal() {
     if (sessionStorage.getItem(SESSION_KEY)) return;
 
     const isMobile = window.matchMedia("(max-width: 768px)").matches;
+    if (isMobile && pathname.startsWith("/blog/")) return;
 
     const trigger = () => {
       if (sessionStorage.getItem(SESSION_KEY)) return;
@@ -73,7 +76,7 @@ export function ConsultationModal() {
       document.removeEventListener("mouseout", onMouseOut);
       if (timer) clearTimeout(timer);
     };
-  }, []);
+  }, [pathname]);
 
   const open = showExit || isExternalOpen;
 
@@ -118,6 +121,10 @@ export function ConsultationModal() {
               formType="callback"
               submitLabel="Записаться на выезд"
               showComment={false}
+              bitrixForm={{
+                id: "inline/9/96lgex",
+                loaderUrl: "https://cdn-ru.bitrix24.kz/b38119650/crm/form/loader_9.js",
+              }}
             />
           </div>
         </div>

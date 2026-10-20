@@ -6,6 +6,8 @@
   --surface: #ffffff;
   --muted: #475569;
   --accent: #38bdf8;
+  --font-geist-sans: Arial, Helvetica, sans-serif;
+  --font-geist-mono: "Courier New", monospace;
 }
 
 @theme inline {

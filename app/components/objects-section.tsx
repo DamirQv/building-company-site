@@ -1,19 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import type { Project } from "@/lib/objects";
 import { ObjectsGrid } from "./objects-grid";
 import InteractiveMap from "./interactive-map";
+import { CallbackButton } from "./callback-button";
 
-type BuiltObject = {
-  title: string;
-  area: string;
-  material: string;
-  duration: string;
-  district: string;
-  quote: string;
-  author: string;
-  image: string;
-};
+type BuiltObject = Project;
 
 /**
  * Единая секция «Наши объекты»: переключатель «Карточки / На карте».
@@ -80,6 +73,10 @@ export function ObjectsSection({ items }: { items: BuiltObject[] }) {
             <InteractiveMap />
           </div>
         )}
+
+        <div className="mt-12 flex justify-center">
+          <CallbackButton source="objects" />
+        </div>
       </div>
     </section>
   );

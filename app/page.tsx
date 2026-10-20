@@ -1,23 +1,22 @@
-import Image from "next/image";
+import Link from "next/link";
 import LeadQuiz from "./components/lead-quiz";
 import { LeadForm } from "./components/lead-form";
 import { HeroContent } from "./components/hero-content";
+import { HeroBackground } from "./components/hero-background";
 import { TrustStrip } from "./components/trust-strip";
 import { ProcessTimeline } from "./components/process-timeline";
-import { ObjectsSection } from "./components/objects-section";
+import { CurrentProjectsSection } from "./components/current-projects-section";
 import { TestimonialsGrid } from "./components/testimonials-grid";
 import { MaterialsComparison } from "./components/materials-comparison";
-import { TeamGrid } from "./components/team-grid";
 import { DocsBlock } from "./components/docs-block";
-import { FaqSection } from "./components/faq-section";
+import { CallbackButton } from "./components/callback-button";
+import { ArticleCard } from "./components/article-card";
+import { BlogStateNotice } from "./components/blog-state-notice";
+import { getPublishedNewsResult, newsToBlogArticles } from "@/lib/news";
 import {
-  faqs,
-  faqJsonLd,
   organizationJsonLd,
   materialsComparison,
-  builtObjects,
   testimonials,
-  team,
   documents,
 } from "@/lib/content";
 import { formatPrice, getPricingData } from "@/lib/pricing";
@@ -78,6 +77,8 @@ const processSteps = [
 
 export default async function Home() {
   const pricing = await getPricingData();
+  const newsResult = await getPublishedNewsResult();
+  const recentArticles = newsResult.ok ? newsToBlogArticles(newsResult.items).slice(0, 3) : [];
   const basePrice = pricing.length > 0
     ? Math.min(...pricing.map((entry) => entry.pricePerM2))
     : 135000;
@@ -89,22 +90,11 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd()) }}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd()) }}
-      />
 
       {/* Блок 1 — Первый экран */}
       <section className="relative isolate overflow-hidden bg-slate-50">
-        <Image
-          src="/hero-home.jpg"
-          alt="Современный частный дом"
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-[68%_center]"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-white via-white/88 to-white/18" />
+        <HeroBackground />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0B2A4A]/95 via-[#155A8A]/70 to-transparent" />
         <div className="relative mx-auto min-h-[calc(100svh-73px)] max-w-7xl px-6 sm:px-8 lg:px-12">
           <HeroContent />
         </div>
@@ -167,16 +157,16 @@ export default async function Home() {
       {/* Статистика — premium trust strip после Hero */}
       <TrustStrip items={stats} />
 
-      {/* Блок 2 — Квиз-калькулятор */}
+      {/* Блок 2 — Калькулятор стоимости */}
       <section id="quiz" className="mx-auto max-w-7xl scroll-mt-20 px-6 py-6 sm:px-8 lg:px-12">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-blue-700">Квиз-калькулятор</p>
-            <h2 className="mt-2 text-3xl font-semibold sm:text-4xl">Рассчитайте стоимость дома за 1 минуту</h2>
+            <p className="text-sm uppercase tracking-[0.3em] text-blue-700">Калькулятор стоимости</p>
+            <h2 className="mt-2 text-3xl font-semibold sm:text-4xl">Рассчитайте стоимость дома</h2>
           </div>
           <div className="text-sm text-slate-600">Быстро • Точно • Без переплат</div>
         </div>
-        <LeadQuiz />
+        <LeadQuiz pricing={pricing} />
       </section>
 
       {/* Блок 3 — Почему Standard Stroy (объединённый блок доверия и преимуществ) */}
@@ -197,28 +187,54 @@ export default async function Home() {
             </div>
           ))}
         </div>
+        <div className="mt-10 flex justify-center">
+          <CallbackButton source="why" />
+        </div>
       </section>
 
       {/* Блок 5-9 — Как мы строим ваш дом (объединённый timeline процесса) */}
       <ProcessTimeline steps={processSteps} />
 
-      {/* Блок 6-12 — Наши объекты (карточки + карта, одно представление за раз) */}
-      <ObjectsSection items={builtObjects} />
+      {/* Блок 6-12 — Текущие объекты */}
+      <CurrentProjectsSection />
 
       {/* Блок 7 — Отзывы */}
       <TestimonialsGrid items={testimonials} />
 
       {/* Блок 8 — Материалы: сравнение */}
-      <MaterialsComparison rows={materialsComparison} />
-
-      {/* Блок 10 — Команда */}
-      <TeamGrid members={team} />
+      <MaterialsComparison rows={materialsComparison} pricing={pricing} />
 
       {/* Блок 11 — Документы */}
       <DocsBlock items={documents} />
 
-      {/* Блок 12 — FAQ */}
-      <FaqSection items={faqs} />
+      {/* Блок 12 — Новости и статьи */}
+      <section className="mx-auto w-full max-w-7xl px-6 sm:px-8 lg:px-12">
+        <div className="py-16 sm:py-20">
+          <div className="mb-12">
+            <p className="text-sm uppercase tracking-[0.3em] text-blue-700">Журнал Standard Stroy</p>
+            <h2 className="mt-2 text-3xl font-semibold sm:text-4xl">Новости Standard Stroy</h2>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600">
+              Полезные материалы о проектировании, планировании и этапах строительства дома.
+            </p>
+          </div>
+          {!newsResult.ok ? (
+            <BlogStateNotice unavailable />
+          ) : recentArticles.length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {recentArticles.map((article) => (
+                <ArticleCard key={article.slug} article={article} />
+              ))}
+            </div>
+          ) : (
+            <BlogStateNotice />
+          )}
+          <div className="mt-10">
+            <Link href="/blog" className="text-sm font-medium text-blue-700 transition hover:text-blue-900">
+              Все новости →
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Блок 13 — Финальный CTA + форма */}
       <section className="mx-auto max-w-7xl px-6 py-20 sm:px-8 lg:px-12">

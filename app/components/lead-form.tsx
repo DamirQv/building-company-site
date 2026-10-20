@@ -15,13 +15,20 @@ type LeadFormProps = {
   showComment?: boolean;
   /** Вариант оформления: light (на светлом фоне) | dark (на тёмном) */
   variant?: "light" | "dark";
+  /** Идентификатор и loader существующей CRM-формы Bitrix24. */
+  bitrixForm?: {
+    id: string;
+    loaderUrl: string;
+  };
 };
 
 export function LeadForm({
-  blockCode: _blockCode,
-  formType: _formType = "consultation",
   submitLabel = "Получить консультацию",
   variant = "light",
+  bitrixForm = {
+    id: "inline/1/9vv7im",
+    loaderUrl: "https://cdn-ru.bitrix24.kz/b38119650/crm/form/loader_1.js",
+  },
 }: LeadFormProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isDark = variant === "dark";
@@ -33,7 +40,7 @@ export function LeadForm({
     if (existingScript) return;
 
     const script = document.createElement("script");
-    script.setAttribute("data-b24-form", "inline/1/9vv7im");
+    script.setAttribute("data-b24-form", bitrixForm.id);
     script.setAttribute("data-skip-moving", "true");
     script.textContent = `
       (function(w,d,u){
@@ -42,11 +49,11 @@ export function LeadForm({
         s.src=u+'?'+(Date.now()/180000|0);
         var h=d.getElementsByTagName('script')[0];
         h.parentNode.insertBefore(s,h);
-      })(window,document,'https://cdn-ru.bitrix24.kz/b38119650/crm/form/loader_1.js');
+      })(window,document,'${bitrixForm.loaderUrl}');
     `;
 
     containerRef.current.appendChild(script);
-  }, []);
+  }, [bitrixForm.id, bitrixForm.loaderUrl]);
 
   return (
     <div className="space-y-3">

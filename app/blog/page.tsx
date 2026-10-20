@@ -1,30 +1,38 @@
 import type { Metadata } from "next";
+import { getPublishedNewsResult, newsToBlogArticles } from "@/lib/news";
+import { BlogArchive } from "../components/blog-archive";
+import { BlogStateNotice } from "../components/blog-state-notice";
 
 export const metadata: Metadata = {
-  title: "Блог — Standard Stroy, строительство домов в Алматы",
+  title: "Новости и статьи — Standard Stroy",
   description:
-    "Статьи о строительстве домов в Алматы: выбор материалов, этапы строительства, разрешение на ИЖС, ипотека, новый Строительный кодекс РК.",
+    "Новости и публикации Standard Stroy о строительстве домов и ходе работ.",
   alternates: { canonical: "/blog" },
 };
 
-export default function BlogPage() {
-  return (
-    <main className="min-h-screen bg-blue-50 px-6 py-24 text-slate-900 sm:px-8 lg:px-12">
-      <div className="mx-auto max-w-4xl">
-        <p className="text-sm uppercase tracking-[0.3em] text-blue-700">Блог</p>
-        <h1 className="mt-4 text-4xl font-semibold sm:text-5xl">Блог о строительстве</h1>
-        <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600">
-          Статьи о строительстве домов в Алматы: выбор материалов, этапы, разрешение на ИЖС,
-          ипотека и новый Строительный кодекс РК.
-        </p>
+export default async function BlogPage() {
+  const result = await getPublishedNewsResult();
+  const articles = result.ok ? newsToBlogArticles(result.items) : [];
 
-        <div className="mt-12 rounded-[2rem] border border-zinc-200 bg-white p-12 text-center shadow-sm">
-          <div className="text-4xl">📝</div>
-          <h2 className="mt-4 text-xl font-semibold text-zinc-900">Блог скоро появится</h2>
-          <p className="mt-2 text-sm text-zinc-500">
-            Мы готовим статьи о строительстве домов в Алматы. Загляните позже.
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-12 text-slate-900 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
+      <div className="mx-auto max-w-7xl">
+        <header className="max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-800">Журнал Standard Stroy</p>
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+            Новости и статьи
+          </h1>
+          <p className="mt-5 text-base leading-8 text-slate-600 sm:text-lg">
+            Разбираем этапы строительства, подготовку к проекту и решения, которые помогают увереннее планировать будущий дом.
           </p>
-        </div>
+        </header>
+        {!result.ok ? (
+          <div className="mt-10"><BlogStateNotice unavailable /></div>
+        ) : articles.length === 0 ? (
+          <div className="mt-10"><BlogStateNotice /></div>
+        ) : (
+          <BlogArchive articles={articles} />
+        )}
       </div>
     </main>
   );

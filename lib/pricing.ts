@@ -14,7 +14,6 @@ export const DEFAULT_PRICING: PricingEntry[] = [
   { material: "Финблок", pricePerM2: 155000, currency: "KZT" },
   { material: "Газоблок", pricePerM2: 135000, currency: "KZT" },
   { material: "Кирпич", pricePerM2: 140000, currency: "KZT" },
-  { material: "Не определился", pricePerM2: 135000, currency: "KZT" },
 ];
 
 function normalizeText(value: string): string {
@@ -51,6 +50,10 @@ function decodeEntities(value: string): string {
 function normalizeGoogleSheetsUrl(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return "";
+
+  if (/docs\.google\.com\/spreadsheets\/d\/e\/[^/]+\/pub(?:\?|$)/i.test(trimmed)) {
+    return trimmed;
+  }
 
   if (/docs\.google\.com\/spreadsheets\//i.test(trimmed)) {
     const match = trimmed.match(/\/spreadsheets\/d\/([^/]+)/i);
@@ -267,8 +270,8 @@ function parsePricingCsv(csv: string): PricingEntry[] {
 
 export async function getPricingData(): Promise<PricingEntry[]> {
   const sourceUrl =
-    normalizeGoogleSheetsUrl(process.env.PRICING_SHEET_URL?.trim() || "") ||
-    normalizeGoogleSheetsUrl(process.env.GOOGLE_SHEETS_CSV_URL?.trim() || "");
+    normalizeGoogleSheetsUrl(process.env.GOOGLE_SHEETS_CSV_URL?.trim() || "") ||
+    normalizeGoogleSheetsUrl(process.env.PRICING_SHEET_URL?.trim() || "");
 
   if (!sourceUrl) {
     return DEFAULT_PRICING;

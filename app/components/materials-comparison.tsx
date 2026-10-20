@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { CallbackButton } from "./callback-button";
+import type { PricingEntry } from "@/lib/pricing";
+import { resolveMaterialPrice } from "@/lib/pricing";
 
 type ComparisonRow = {
   feature: string;
@@ -27,7 +30,17 @@ const columns = [
  * Desktop: таблица. Mobile: адаптивный стек карточек без горизонтального скролла.
  * Стиль согласован с остальными блоками: светлая основа, тонкие линии, синий акцент.
  */
-export function MaterialsComparison({ rows }: { rows: ComparisonRow[] }) {
+export function MaterialsComparison({ rows, pricing }: { rows: ComparisonRow[]; pricing: PricingEntry[] }) {
+  const comparisonRows: ComparisonRow[] = [
+    ...rows,
+    {
+      feature: "Цена за м²",
+      finnblock: `от ${resolveMaterialPrice("FinnBlock", pricing).toLocaleString("ru-RU")} ₸`,
+      gazoblock: `от ${resolveMaterialPrice("Газоблок", pricing).toLocaleString("ru-RU")} ₸`,
+      kirpich: `от ${resolveMaterialPrice("Кирпич", pricing).toLocaleString("ru-RU")} ₸`,
+    },
+  ];
+
   return (
     <section className="mx-auto w-full max-w-7xl px-6 sm:px-8 lg:px-12">
       <motion.div
@@ -63,7 +76,7 @@ export function MaterialsComparison({ rows }: { rows: ComparisonRow[] }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {comparisonRows.map((row) => (
                 <tr key={row.feature} className="border-b border-slate-100 last:border-0">
                   <td className="whitespace-nowrap py-4 pl-6 pr-4 font-medium text-slate-700">{row.feature}</td>
                   {columns.map((col) => (
@@ -89,7 +102,7 @@ export function MaterialsComparison({ rows }: { rows: ComparisonRow[] }) {
                 {col.label}
               </div>
               <dl className="divide-y divide-slate-100">
-                {rows.map((row) => (
+                {comparisonRows.map((row) => (
                   <div key={row.feature} className="flex items-center justify-between gap-4 px-5 py-3">
                     <dt className="text-sm text-slate-500">{row.feature}</dt>
                     <dd className="text-right text-sm font-medium text-slate-800">{row[col.key]}</dd>
@@ -106,6 +119,10 @@ export function MaterialsComparison({ rows }: { rows: ComparisonRow[] }) {
               {link.label} →
             </Link>
           ))}
+        </div>
+
+        <div className="mt-10 flex justify-center">
+          <CallbackButton source="materials" />
         </div>
       </motion.div>
     </section>

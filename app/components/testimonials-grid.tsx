@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-
-type Testimonial = {
-  name: string;
-  object: string;
-  type: string;
-  videoUrl?: string;
-  text: string;
-};
+import type { Testimonial } from "@/lib/content";
 
 /**
  * Секция «Что говорят клиенты».
@@ -46,12 +39,21 @@ export function TestimonialsGrid({ items }: { items: Testimonial[] }) {
               <span className="inline-flex w-fit items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
                 {item.type}
               </span>
-              <blockquote className="mt-5 flex-1">
+              {item.text && <blockquote className="mt-5 flex-1">
                 <p className="text-[15px] leading-7 text-slate-700">«{item.text}»</p>
-              </blockquote>
+              </blockquote>}
               <figcaption className="mt-6 border-t border-slate-100 pt-4">
                 <div className="font-medium text-slate-900">{item.name}</div>
                 <div className="mt-0.5 text-xs text-slate-500">{item.object}</div>
+                {item.date && <div className="mt-1 text-xs text-slate-500">{item.date}</div>}
+                <a
+                  href={item.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-flex text-sm font-medium text-blue-700 transition hover:text-blue-900"
+                >
+                  {item.source === "Instagram" ? "Смотреть в Instagram" : "Смотреть отзыв в 2GIS"} →
+                </a>
               </figcaption>
             </motion.figure>
           ))}
