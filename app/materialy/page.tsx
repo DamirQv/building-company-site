@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { formatCityPrice, getPricingData, resolveMaterialPrice } from "@/lib/pricing";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Материалы для строительства домов — FinnBlock, газоблок, кирпич",
@@ -11,25 +14,30 @@ export const metadata: Metadata = {
 const materials = [
   {
     slug: "doma-iz-finnblock",
+    material: "FinnBlock",
     title: "Дома из FinnBlock",
-    description: "Тёплый, сейсмоустойчивый, быстрый в монтаже. Не требует утепления. От 135 000 ₸/м².",
+    description: "Тёплый, сейсмоустойчивый, быстрый в монтаже. Не требует утепления.",
     pros: ["Отличная теплоизоляция", "Высокая сейсмостойкость", "Быстрое возведение", "Не требует утепления"],
   },
   {
     slug: "doma-iz-gazobloka",
+    material: "Газоблок",
     title: "Дома из газоблока",
-    description: "Автоклавный газобетон — проверенное решение. Хорошая теплоизоляция, доступная цена. От 150 000 ₸/м².",
+    description: "Автоклавный газобетон — проверенное решение с хорошей теплоизоляцией и точной геометрией.",
     pros: ["Хорошая теплоизоляция", "Высокая сейсмостойкость", "Доступная цена", "Минимальное утепление"],
   },
   {
     slug: "doma-iz-kirpicha",
+    material: "Кирпич",
     title: "Дома из кирпича",
-    description: "Классика — долговечность и престиж. Требует утепления, но служит поколениями. От 180 000 ₸/м².",
+    description: "Классика — долговечность и престиж. Требует утепления, но служит поколениями.",
     pros: ["Долговечность", "Престижный внешний вид", "Облицовочный кирпич — без фасада", "Огнестойкость"],
   },
 ];
 
-export default function MaterialyPage() {
+export default async function MaterialyPage() {
+  const pricing = await getPricingData();
+
   return (
     <main className="min-h-screen bg-blue-50 px-6 py-24 text-slate-900 sm:px-8 lg:px-12">
       <div className="mx-auto max-w-6xl">
@@ -49,6 +57,12 @@ export default function MaterialyPage() {
             >
               <h2 className="text-xl font-semibold text-zinc-900">{mat.title}</h2>
               <p className="mt-3 text-sm leading-7 text-zinc-600">{mat.description}</p>
+              <p className="mt-4 text-sm font-medium text-blue-700">
+                Алматы: {formatCityPrice(resolveMaterialPrice(mat.material, pricing), "Алматы")}
+              </p>
+              <p className="mt-1 text-sm font-medium text-blue-700">
+                Астана: {formatCityPrice(resolveMaterialPrice(mat.material, pricing, "Астана"), "Астана")}
+              </p>
               <ul className="mt-4 space-y-1">
                 {mat.pros.map((pro) => (
                   <li key={pro} className="text-xs text-slate-500">• {pro}</li>

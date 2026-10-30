@@ -5,8 +5,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { collectTracking } from "@/lib/utm";
 import { trackLead, trackQuizStart, trackContact } from "@/lib/analytics-events";
-import { formatPrice, resolveMaterialPrice } from "@/lib/pricing";
-import type { PricingEntry } from "@/lib/pricing";
+import { formatCityPrice, resolveMaterialPrice } from "@/lib/pricing";
+import type { PricingEntry, PricingSource } from "@/lib/pricing";
 
 /**
  * Калькулятор стоимости дома для Standard Stroy.
@@ -49,8 +49,15 @@ function formatKzt(value: number): string {
   return value.toLocaleString("ru-RU");
 }
 
-export default function LeadQuiz({ pricing }: { pricing: PricingEntry[] }) {
+export default function LeadQuiz({
+  pricing,
+  pricingSource,
+}: {
+  pricing: PricingEntry[];
+  pricingSource: PricingSource;
+}) {
   const [step, setStep] = useState<CalcStep>("area");
+  const [city, setCity] = useState<"Алматы" | "Астана" | "">("");
   const [area, setArea] = useState("");
   const [material, setMaterial] = useState("");
   const [finishLevel, setFinishLevel] = useState("");
@@ -63,12 +70,12 @@ export default function LeadQuiz({ pricing }: { pricing: PricingEntry[] }) {
 
   const estimate = useMemo(() => {
     const areaValue = Number(area ?? 0);
-    const pricePerM2 = resolveMaterialPrice(material, pricing);
+    const pricePerM2 = resolveMaterialPrice(material, pricing, city || "Алматы");
     const finishFactor = FINISH_FACTOR[finishLevel ?? ""] ?? 1.0;
     const base = areaValue * pricePerM2 * finishFactor;
     // Диапазон ±15%
     return { min: Math.round(base * 0.85), max: Math.round(base * 1.15) };
-  }, [area, material, finishLevel, pricing]);
+  }, [area, material, finishLevel, pricing, city]);
 
   const next = () => {
     setError("");
@@ -80,6 +87,10 @@ export default function LeadQuiz({ pricing }: { pricing: PricingEntry[] }) {
 
     if (step === "area") {
       const areaValue = Number(area);
+      if (!city) {
+        setError("Выберите город строительства");
+        return;
+      }
       if (!area || !Number.isInteger(areaValue) || areaValue < AREA_MIN || areaValue > AREA_MAX) {
         setError("Введите целое число от 30 до 1000 м²");
         return;
@@ -124,8 +135,10 @@ export default function LeadQuiz({ pricing }: { pricing: PricingEntry[] }) {
           formType: "quiz",
           consent,
           quiz_completed: true,
+          city,
           estimate_min: estimate.min,
           estimate_max: estimate.max,
+          price_per_m2: resolveMaterialPrice(material, pricing, city || "Алматы"),
           area_m2: Number(area),
           material,
           finish_level: finishLevel,
@@ -163,12 +176,12 @@ export default function LeadQuiz({ pricing }: { pricing: PricingEntry[] }) {
             Если не ответим в течение 30 минут — проверьте спам.
           </p>
           <div className="mt-6 inline-flex rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-900">
-            Базовая цена: {formatPrice(resolveMaterialPrice(material, pricing))} · Ориентировочный диапазон: {formatKzt(estimate.min)}–{formatKzt(estimate.max)} ₸
+            {formatCityPrice(resolveMaterialPrice(material, pricing, city || "Алматы"), city || "Алматы")} · {city} · Ориентировочно: от {formatKzt(estimate.min)} до {formatKzt(estimate.max)} ₸
           </div>
           <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
               href={`https://wa.me/77770500803?text=${encodeURIComponent(
-                "Здравствуйте! Хочу получить точный расчёт стоимости дома.\nМатериал: " + (material || "—") + "\nПлощадь: " + (area || "—") + " м²\nОтделка: " + (finishLevel || "—") + "\nОриентировочный диапазон: " + formatKzt(estimate.min) + "–" + formatKzt(estimate.max) + " ₸\nСайт Standard Stroy [S-QUIZ]"
+                "Здравствуйте! Хочу получить точный расчёт стоимости дома.\nГород: " + (city || "—") + "\nМатериал: " + (material || "—") + "\nЦена за м²: " + formatCityPrice(resolveMaterialPrice(material, pricing, city || "Алматы"), city || "Алматы") + "\nПлощадь: " + (area || "—") + " м²\nОтделка: " + (finishLevel || "—") + "\nОриентировочный диапазон: от " + formatKzt(estimate.min) + " до " + formatKzt(estimate.max) + " ₸\nСайт Standard Stroy [S-QUIZ]"
               )}`}
               target="_blank"
               rel="noreferrer"
@@ -185,6 +198,14 @@ export default function LeadQuiz({ pricing }: { pricing: PricingEntry[] }) {
 
   return (
     <div className="rounded-[2rem] border border-slate-200 bg-white p-6 lg:p-8 shadow-sm">
+      {pricingSource === "default" && (
+        <p
+          role="status"
+          className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+        >
+          Внимание: временно используются резервные цены. Итоговую стоимость уточняйте у менеджера.
+        </p>
+      )}
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm uppercase tracking-[0.35em] text-blue-700">Калькулятор стоимости</p>
@@ -205,6 +226,29 @@ export default function LeadQuiz({ pricing }: { pricing: PricingEntry[] }) {
       <motion.div key={step} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-8">
         {step === "area" && (
           <div>
+            <fieldset>
+              <legend className="text-lg font-medium text-slate-900">Где планируете строить?</legend>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                {(["Алматы", "Астана"] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={city === option}
+                    onClick={() => {
+                      setCity(option);
+                      setError("");
+                    }}
+                    className={`rounded-2xl border px-5 py-3 text-left text-sm transition ${
+                      city === option
+                        ? "border-blue-700 bg-blue-50 text-slate-900"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
             <div className="text-lg font-medium text-slate-900">Какая площадь дома?</div>
             <p className="mt-1 text-sm text-slate-500">Укажите примерную площадь дома в м²</p>
             <input
@@ -327,7 +371,7 @@ export default function LeadQuiz({ pricing }: { pricing: PricingEntry[] }) {
                 {formatKzt(estimate.min)}–{formatKzt(estimate.max)} ₸
               </div>
               <div className="mt-2 inline-flex rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-900">
-                Базовая цена: {formatPrice(resolveMaterialPrice(material, pricing))} · {area} м² · {finishLevel}
+                {formatCityPrice(resolveMaterialPrice(material, pricing, city || "Алматы"), city || "Алматы")} · {city} · {area} м² · {finishLevel}
               </div>
             </div>
             <p className="mt-4 text-sm leading-7 text-slate-600">

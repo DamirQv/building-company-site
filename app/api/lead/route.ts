@@ -1,4 +1,5 @@
 ﻿import { NextResponse } from "next/server";
+import { getPricingData, resolveMaterialPrice } from "@/lib/pricing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ type LeadPayload = {
   quiz_completed?: boolean;
   estimate_min?: number;
   estimate_max?: number;
+  price_per_m2?: number;
   city?: string;
   object_type?: string;
   has_land?: string;
@@ -37,6 +39,7 @@ function buildComments(payload: LeadPayload): string {
     `start_date: ${payload.start_date ?? "-"}`,
     `estimate_min: ${payload.estimate_min ?? "-"}`,
     `estimate_max: ${payload.estimate_max ?? "-"}`,
+    `price_per_m2: ${payload.price_per_m2 ?? "-"}`,
   ];
 
   const tracking = payload.tracking ?? {};
@@ -54,6 +57,7 @@ function buildComments(payload: LeadPayload): string {
     "quiz_completed",
     "estimate_min",
     "estimate_max",
+    "price_per_m2",
     "city",
     "object_type",
     "has_land",
@@ -127,11 +131,32 @@ const MATERIAL_IDS: Record<string, number> = {
   другое: 205,
 };
 
+const QUIZ_AREA_MIN = 30;
+const QUIZ_AREA_MAX = 1000;
+const QUIZ_FINISH_FACTORS: Record<string, number> = {
+  "Коробка дома": 0.6,
+  Предчистовая: 0.8,
+  "Под ключ": 1.0,
+};
+
+function normalizeQuizMaterial(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "finnblock" || normalized === "финблок") return "FinnBlock";
+  if (normalized === "газоблок") return "Газоблок";
+  if (normalized === "кирпич") return "Кирпич";
+  return null;
+}
+
 export async function POST(request: Request) {
   let body: LeadPayload;
 
   try {
-    body = (await request.json()) as LeadPayload;
+    const payload: unknown = await request.json();
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return NextResponse.json({ ok: false, error: "Request body must be an object" }, { status: 400 });
+    }
+    body = payload as LeadPayload;
   } catch {
     return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
@@ -152,6 +177,65 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "consent must be true" }, { status: 400 });
   }
 
+  const hasQuizPricingData = [
+    body.city,
+    body.material,
+    body.area_m2,
+    body.finish_level,
+    body.price_per_m2,
+    body.estimate_min,
+    body.estimate_max,
+  ].some((value) => value !== undefined && value !== null && value !== "");
+  const isQuiz = body.formType === "quiz" || body.quiz_completed === true || hasQuizPricingData;
+  let effectiveBody = body;
+
+  if (isQuiz) {
+    if (body.city !== "Алматы" && body.city !== "Астана") {
+      return NextResponse.json({ ok: false, error: "Выберите город: Алматы или Астана" }, { status: 400 });
+    }
+
+    const material = normalizeQuizMaterial(body.material);
+    if (!material) {
+      return NextResponse.json({ ok: false, error: "Выберите допустимый материал строительства" }, { status: 400 });
+    }
+
+    const areaM2 = typeof body.area_m2 === "number" ? body.area_m2 : Number(body.area_m2);
+    if (!Number.isFinite(areaM2) || !Number.isInteger(areaM2) || areaM2 < QUIZ_AREA_MIN || areaM2 > QUIZ_AREA_MAX) {
+      return NextResponse.json(
+        { ok: false, error: `Площадь должна быть целым числом от ${QUIZ_AREA_MIN} до ${QUIZ_AREA_MAX} м²` },
+        { status: 400 },
+      );
+    }
+
+    if (
+      typeof body.finish_level !== "string" ||
+      !Object.prototype.hasOwnProperty.call(QUIZ_FINISH_FACTORS, body.finish_level)
+    ) {
+      return NextResponse.json({ ok: false, error: "Выберите допустимый уровень комплектации" }, { status: 400 });
+    }
+
+    const pricing = await getPricingData();
+    const pricePerM2 = resolveMaterialPrice(material, pricing, body.city);
+    if (!Number.isFinite(pricePerM2) || pricePerM2 <= 0) {
+      console.error("[lead] No valid price available for the selected quiz options");
+      return NextResponse.json({ ok: false, error: "Не удалось рассчитать стоимость. Попробуйте позже" }, { status: 503 });
+    }
+
+    const base = areaM2 * pricePerM2 * QUIZ_FINISH_FACTORS[body.finish_level];
+    const estimateMin = Math.round(base * 0.85);
+    const estimateMax = Math.round(base * 1.15);
+    effectiveBody = {
+      ...body,
+      city: body.city,
+      material,
+      area_m2: areaM2,
+      finish_level: body.finish_level,
+      price_per_m2: pricePerM2,
+      estimate_min: estimateMin,
+      estimate_max: estimateMax,
+    };
+  }
+
   const webhookUrl = process.env.BITRIX24_WEBHOOK_URL?.trim();
   if (!webhookUrl) {
     return NextResponse.json({ ok: false, error: "BITRIX24 webhook is not configured" }, { status: 500 });
@@ -160,17 +244,21 @@ export async function POST(request: Request) {
   const webhookBaseUrl = webhookUrl.replace(/\/+$/, "");
   const contactEndpoint = `${webhookBaseUrl}/crm.contact.add.json`;
   const dealEndpoint = `${webhookBaseUrl}/crm.item.add.json`;
-  const tracking = typeof body.tracking === "object" && body.tracking ? body.tracking : {};
+  const tracking = typeof effectiveBody.tracking === "object" && effectiveBody.tracking ? effectiveBody.tracking : {};
   const flattenedTracking: Record<string, unknown> = { ...tracking };
 
-  for (const [key, value] of Object.entries(body)) {
+  for (const [key, value] of Object.entries(effectiveBody)) {
     if (key !== "tracking" && key !== "consent" && value !== undefined && value !== null && value !== "") {
       flattenedTracking[key] = value;
     }
   }
 
-  const areaM2 = typeof body.area_m2 === "number" ? body.area_m2 : Number(body.area_m2);
-  const estimateMax = typeof body.estimate_max === "number" ? body.estimate_max : Number(body.estimate_max);
+  const areaM2 = typeof effectiveBody.area_m2 === "number"
+    ? effectiveBody.area_m2
+    : Number(effectiveBody.area_m2);
+  const estimateMax = typeof effectiveBody.estimate_max === "number"
+    ? effectiveBody.estimate_max
+    : Number(effectiveBody.estimate_max);
   const budgetId = Number.isFinite(estimateMax)
     ? estimateMax < 15_000_000
       ? 127
@@ -183,17 +271,17 @@ export async function POST(request: Request) {
 
   const dealFields: Record<string, unknown> = {
     title: `Заявка с сайта — квиз — ${name}`,
-    comments: buildComments({ ...body, tracking: flattenedTracking }),
+    comments: buildComments({ ...effectiveBody, tracking: flattenedTracking }),
     ufCrm_1783000963: budgetId,
   };
 
   const enumFields = {
-    ufCrm_1783000383: CITY_IDS[body.city ?? ""],
-    ufCrm_1783000592: OBJECT_TYPE_IDS[body.object_type ?? ""],
-    ufCrm_1783000831: FINISH_LEVEL_IDS[body.finish_level ?? ""],
-    ufCrm_1783000899: START_DATE_IDS[body.start_date ?? ""],
-    ufCrm_1783000503: HAS_LAND_IDS[body.has_land ?? ""],
-    ufCrm_1783078367222: MATERIAL_IDS[body.material ?? ""],
+    ufCrm_1783000383: CITY_IDS[effectiveBody.city ?? ""],
+    ufCrm_1783000592: OBJECT_TYPE_IDS[effectiveBody.object_type ?? ""],
+    ufCrm_1783000831: FINISH_LEVEL_IDS[effectiveBody.finish_level ?? ""],
+    ufCrm_1783000899: START_DATE_IDS[effectiveBody.start_date ?? ""],
+    ufCrm_1783000503: HAS_LAND_IDS[effectiveBody.has_land ?? ""],
+    ufCrm_1783078367222: MATERIAL_IDS[effectiveBody.material ?? ""],
   };
 
   for (const [field, value] of Object.entries(enumFields)) {

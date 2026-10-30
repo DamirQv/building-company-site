@@ -3,17 +3,25 @@ import { unzipSync } from "fflate";
 export type PricingEntry = {
   material: string;
   pricePerM2: number;
+  astanaPricePerM2: number;
   currency?: string;
 };
 
+export type PricingSource = "google-sheets" | "default";
+
+export type PricingData = {
+  pricing: PricingEntry[];
+  source: PricingSource;
+};
+
 /**
- * Актуальные цены (fallback) — совпадают со значениями в Excel Online.
+ * Актуальные цены (fallback) при недоступности внешней таблицы.
  * Используются, когда внешний источник временно недоступен.
  */
 export const DEFAULT_PRICING: PricingEntry[] = [
-  { material: "Финблок", pricePerM2: 155000, currency: "KZT" },
-  { material: "Газоблок", pricePerM2: 135000, currency: "KZT" },
-  { material: "Кирпич", pricePerM2: 140000, currency: "KZT" },
+  { material: "FinnBlock", pricePerM2: 160000, astanaPricePerM2: 200000, currency: "KZT" },
+  { material: "Газоблок", pricePerM2: 150000, astanaPricePerM2: 190000, currency: "KZT" },
+  { material: "Кирпич", pricePerM2: 155000, astanaPricePerM2: 195000, currency: "KZT" },
 ];
 
 function normalizeText(value: string): string {
@@ -26,6 +34,7 @@ function normalizeText(value: string): string {
  */
 const MATERIAL_ALIASES: Record<string, string> = {
   finblock: "finnblock",
+  пенобетон: "finnblock",
   финблок: "finnblock",
   фінблок: "finnblock",
   фиблоблок: "finnblock",
@@ -34,6 +43,9 @@ const MATERIAL_ALIASES: Record<string, string> = {
 
 function canonicalMaterialKey(material: string): string {
   const key = normalizeText(material);
+  if (key.includes("finnblock") || key.includes("финблок") || key === "пенобетон") {
+    return "finnblock";
+  }
   return MATERIAL_ALIASES[key] ?? key;
 }
 
@@ -89,6 +101,7 @@ const BROWSER_UA =
 async function fetchBinary(url: string): Promise<Uint8Array> {
   const res = await fetch(url, {
     cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
     headers: {
       "User-Agent": BROWSER_UA,
       Accept:
@@ -117,7 +130,7 @@ function isPkgZip(data: Uint8Array): boolean {
 /**
  * Парсинг XLSX (ZIP со sheet1.xml + sharedStrings.xml) через fflate.
  */
-function parsePricingXlsx(data: Uint8Array): PricingEntry[] {
+function parsePricingXlsx(data: Uint8Array): ParsedPricingData {
   const files = unzipSync(data);
 
   const sheetName = Object.keys(files).find((name) =>
@@ -127,7 +140,7 @@ function parsePricingXlsx(data: Uint8Array): PricingEntry[] {
     /xl\/sharedStrings\.xml$/i.test(name),
   );
 
-  if (!sheetName) return [];
+  if (!sheetName) return { entries: [], usesDefaultPricing: false };
 
   const sharedStrings = stringsName
     ? [...decodeUtf8(files[stringsName]).matchAll(/<t(?:\s[^>]*)?>([^<]*)<\/t>/g)].map(
@@ -166,28 +179,41 @@ function parsePricingXlsx(data: Uint8Array): PricingEntry[] {
     rows.get(rowNum)!.set(col, value);
   }
 
-  const entries: PricingEntry[] = [];
   const sortedRows = Array.from(rows.keys()).sort((a, b) => a - b);
+  const headerRow = rows.get(1);
+  if (!headerRow) return { entries: [], usesDefaultPricing: false };
 
-  for (const rowNum of sortedRows) {
-    if (rowNum === 1) continue; // строка заголовков
-    const rowCells = rows.get(rowNum)!;
-    const material = rowCells.get("A");
-    const price = rowCells.get("B");
+  const columnLetters = Array.from(new Set(sortedRows.flatMap((row) => [...(rows.get(row)?.keys() ?? [])])));
+  const headers = columnLetters.map((column) => String(headerRow.get(column) ?? ""));
+  const indexes = getPricingHeaderIndexes(headers);
+  if (!indexes) return { entries: [], usesDefaultPricing: false };
 
-    if (typeof material === "string" && material.trim()) {
-      const priceValue =
-        typeof price === "number" ? price : parseNumber(String(price ?? "")) ?? 0;
-      entries.push({
-        material: material.trim(),
-        pricePerM2: priceValue,
-        currency: "KZT",
-      });
-    }
-  }
+  let usesDefaultPricing = false;
+  const entries = sortedRows.slice(1).reduce<PricingEntry[]>((entries, rowNum) => {
+    const row = rows.get(rowNum);
+    const material = String(row?.get(columnLetters[indexes.material]) ?? "").trim();
+    const almatyPrice = parseNumber(String(row?.get(columnLetters[indexes.almaty]) ?? ""));
+    if (!material || almatyPrice === null || almatyPrice <= 0) return entries;
 
-  const valid = entries.filter((e) => e.material && e.pricePerM2 > 0);
-  return valid.length > 0 ? valid : [];
+    const astanaPrice = indexes.astana === -1
+      ? null
+      : parseNumber(String(row?.get(columnLetters[indexes.astana]) ?? ""));
+    const resolvedAstanaPrice = astanaPrice && astanaPrice > 0
+      ? astanaPrice
+      : getDefaultAstanaPrice(material);
+    if (!astanaPrice || astanaPrice <= 0) usesDefaultPricing = resolvedAstanaPrice > 0 || usesDefaultPricing;
+    if (resolvedAstanaPrice <= 0) return entries;
+
+    entries.push({
+      material,
+      pricePerM2: almatyPrice,
+      astanaPricePerM2: resolvedAstanaPrice,
+      currency: "KZT",
+    });
+    return entries;
+  }, []);
+
+  return { entries, usesDefaultPricing };
 }
 
 function parseNumber(raw: string): number | null {
@@ -199,6 +225,42 @@ function parseNumber(raw: string): number | null {
   if (!cleaned) return null;
   const value = Number(cleaned);
   return Number.isFinite(value) ? value : null;
+}
+
+type PricingHeaderIndexes = {
+  material: number;
+  almaty: number;
+  astana: number;
+};
+
+type ParsedPricingData = {
+  entries: PricingEntry[];
+  usesDefaultPricing: boolean;
+};
+
+function getPricingHeaderIndexes(headers: string[]): PricingHeaderIndexes | null {
+  const normalized = headers.map(normalizeText);
+  const material = normalized.findIndex((header) =>
+    ["material", "maaterial", "name", "title", "type", "variant", "материал", "название", "вид"].includes(header) ||
+    header.includes("material") ||
+    header.includes("материал")
+  );
+  const almaty = normalized.findIndex((header) =>
+    ["almatypriceperm2", "priceperm2almaty", "priceperm2", "pricepermeter", "price", "costperm2", "cost", "value", "цена", "ценазаm2", "ценазаm²", "стоимость"].includes(header)
+  );
+  const astana = normalized.findIndex((header) =>
+    ["astanapriceperm2", "priceperm2astana"].includes(header)
+  );
+
+  return material === -1 || almaty === -1
+    ? null
+    : { material, almaty, astana };
+}
+
+function getDefaultAstanaPrice(material: string): number {
+  const lookup = canonicalMaterialKey(material);
+  return DEFAULT_PRICING.find((entry) => canonicalMaterialKey(entry.material) === lookup)?.astanaPricePerM2
+    ?? 0;
 }
 
 function parseCsvLine(line: string): string[] {
@@ -227,7 +289,7 @@ function parseCsvLine(line: string): string[] {
   return result;
 }
 
-function parsePricingCsv(csv: string): PricingEntry[] {
+function parsePricingCsv(csv: string): ParsedPricingData {
   const sanitized = csv.replace(/^\uFEFF/, "");
   const rows = sanitized
     .split(/\r?\n/)
@@ -235,46 +297,52 @@ function parsePricingCsv(csv: string): PricingEntry[] {
     .filter(Boolean)
     .map(parseCsvLine);
 
-  if (rows.length === 0) return DEFAULT_PRICING;
+  if (rows.length === 0) return { entries: [], usesDefaultPricing: false };
 
-  const headers = rows[0].map((header) => normalizeText(header));
-  const materialIndex = headers.findIndex((header) =>
-    ["material", "maaterial", "name", "title", "type", "variant", "материал", "название", "вид"].includes(header) ||
-    header.includes("material") ||
-    header.includes("материал")
-  );
-  const priceIndex = headers.findIndex((header) =>
-    ["priceperm2", "pricepermeter", "price", "costperm2", "cost", "value", "цена", "ценазаm2", "ценазаm²", "стоимость"].includes(header) ||
-    header.includes("price") ||
-    header.includes("cost") ||
-    header.includes("цен") ||
-    header.includes("стоимость")
-  );
+  const indexes = getPricingHeaderIndexes(rows[0]);
+  if (!indexes) return { entries: [], usesDefaultPricing: false };
 
-  if (materialIndex === -1 || priceIndex === -1) {
-    return DEFAULT_PRICING;
-  }
-
+  let usesDefaultPricing = false;
   const entries = rows.slice(1).reduce<PricingEntry[]>((acc, row) => {
-    const material = row[materialIndex]?.trim();
-    const price = parseNumber(row[priceIndex] ?? "");
+    const material = row[indexes.material]?.trim();
+    const price = parseNumber(row[indexes.almaty] ?? "");
+    const astanaPrice = indexes.astana === -1
+      ? null
+      : parseNumber(row[indexes.astana] ?? "");
 
     if (!material || price === null || price <= 0) return acc;
+    const resolvedAstanaPrice = astanaPrice && astanaPrice > 0
+      ? astanaPrice
+      : getDefaultAstanaPrice(material);
+    if (!astanaPrice || astanaPrice <= 0) usesDefaultPricing = resolvedAstanaPrice > 0 || usesDefaultPricing;
+    if (resolvedAstanaPrice <= 0) return acc;
 
-    acc.push({ material, pricePerM2: price, currency: "KZT" });
+    acc.push({
+      material,
+      pricePerM2: price,
+      astanaPricePerM2: resolvedAstanaPrice,
+      currency: "KZT",
+    });
     return acc;
   }, []);
 
-  return entries.length > 0 ? entries : DEFAULT_PRICING;
+  return { entries, usesDefaultPricing };
 }
 
-export async function getPricingData(): Promise<PricingEntry[]> {
+function usesPricingFallback(parsed: ParsedPricingData): boolean {
+  if (parsed.usesDefaultPricing) return true;
+  const parsedMaterials = new Set(parsed.entries.map((entry) => canonicalMaterialKey(entry.material)));
+  return DEFAULT_PRICING.some((entry) => !parsedMaterials.has(canonicalMaterialKey(entry.material)));
+}
+
+export async function getPricingDataWithSource(): Promise<PricingData> {
   const sourceUrl =
     normalizeGoogleSheetsUrl(process.env.GOOGLE_SHEETS_CSV_URL?.trim() || "") ||
     normalizeGoogleSheetsUrl(process.env.PRICING_SHEET_URL?.trim() || "");
 
   if (!sourceUrl) {
-    return DEFAULT_PRICING;
+    console.warn("[pricing] Pricing source URL is not configured, using approved fallback prices");
+    return { pricing: DEFAULT_PRICING, source: "default" };
   }
 
   const downloadUrl = toExcelDownloadUrl(sourceUrl);
@@ -285,36 +353,68 @@ export async function getPricingData(): Promise<PricingEntry[]> {
     // XLSX (ZIP) — распаковка и парсинг
     if (isPkgZip(raw)) {
       const parsedXlsx = parsePricingXlsx(raw);
-      if (parsedXlsx.length > 0) return parsedXlsx;
+      if (parsedXlsx.entries.length > 0) {
+        return {
+          pricing: parsedXlsx.entries,
+          source: usesPricingFallback(parsedXlsx) ? "default" : "google-sheets",
+        };
+      }
       console.warn("[pricing] XLSX распознан, но пуст/не разобран, fallback CSV");
-      return DEFAULT_PRICING;
+      return { pricing: DEFAULT_PRICING, source: "default" };
     }
 
     // CSV / текст — старая логика
     const csv = decodeUtf8(raw);
     const parsed = parsePricingCsv(csv);
-    return parsed.length > 0 ? parsed : DEFAULT_PRICING;
+    if (parsed.entries.length > 0) {
+      return {
+        pricing: parsed.entries,
+        source: usesPricingFallback(parsed) ? "default" : "google-sheets",
+      };
+    }
+    console.warn("[pricing] CSV has no valid pricing rows, using approved fallback prices");
+    return { pricing: DEFAULT_PRICING, source: "default" };
   } catch (error) {
     console.warn("[pricing] Не удалось загрузить цены из внешнего источника, используется fallback:", error);
-    return DEFAULT_PRICING;
+    return { pricing: DEFAULT_PRICING, source: "default" };
   }
+}
+
+export async function getPricingData(): Promise<PricingEntry[]> {
+  const { pricing } = await getPricingDataWithSource();
+  return pricing;
 }
 
 export function formatPrice(value: number): string {
   return `${value.toLocaleString("ru-RU")} ₸/м²`;
 }
 
-export function resolveMaterialPrice(material: string | undefined, pricing: PricingEntry[]): number {
+export function resolveMaterialPrice(
+  material: string | undefined,
+  pricing: PricingEntry[],
+  city: "Алматы" | "Астана" = "Алматы",
+): number {
   const lookup = canonicalMaterialKey(material ?? "");
   if (!lookup) {
-    return DEFAULT_PRICING[0]?.pricePerM2 ?? 155000;
+    return city === "Астана"
+      ? DEFAULT_PRICING[0].astanaPricePerM2
+      : DEFAULT_PRICING[0].pricePerM2;
   }
 
   const match = pricing.find((entry) => canonicalMaterialKey(entry.material) === lookup);
   if (match) {
-    return match.pricePerM2;
+    return city === "Астана" ? match.astanaPricePerM2 : match.pricePerM2;
   }
 
-  const fallback = pricing.find((entry) => canonicalMaterialKey(entry.material) === "finnblock");
-  return fallback?.pricePerM2 ?? DEFAULT_PRICING[0]?.pricePerM2 ?? 155000;
+  const fallback = DEFAULT_PRICING.find((entry) => canonicalMaterialKey(entry.material) === lookup)
+    ?? DEFAULT_PRICING[0];
+  if (city === "Астана") {
+    return fallback.astanaPricePerM2;
+  }
+  return fallback.pricePerM2;
+}
+
+export function formatCityPrice(value: number, city: "Алматы" | "Астана"): string {
+  const prefix = city === "Астана" ? "от " : "";
+  return `${prefix}${value.toLocaleString("ru-RU")} ₸/м²`;
 }

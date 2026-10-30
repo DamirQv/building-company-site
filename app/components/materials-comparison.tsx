@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { CallbackButton } from "./callback-button";
 import type { PricingEntry } from "@/lib/pricing";
-import { resolveMaterialPrice } from "@/lib/pricing";
+import { formatCityPrice, resolveMaterialPrice } from "@/lib/pricing";
 
 type ComparisonRow = {
   feature: string;
@@ -35,9 +35,9 @@ export function MaterialsComparison({ rows, pricing }: { rows: ComparisonRow[]; 
     ...rows,
     {
       feature: "Цена за м²",
-      finnblock: `от ${resolveMaterialPrice("FinnBlock", pricing).toLocaleString("ru-RU")} ₸`,
-      gazoblock: `от ${resolveMaterialPrice("Газоблок", pricing).toLocaleString("ru-RU")} ₸`,
-      kirpich: `от ${resolveMaterialPrice("Кирпич", pricing).toLocaleString("ru-RU")} ₸`,
+      finnblock: `${formatCityPrice(resolveMaterialPrice("FinnBlock", pricing), "Алматы")} · ${formatCityPrice(resolveMaterialPrice("FinnBlock", pricing, "Астана"), "Астана")}`,
+      gazoblock: `${formatCityPrice(resolveMaterialPrice("Газоблок", pricing), "Алматы")} · ${formatCityPrice(resolveMaterialPrice("Газоблок", pricing, "Астана"), "Астана")}`,
+      kirpich: `${formatCityPrice(resolveMaterialPrice("Кирпич", pricing), "Алматы")} · ${formatCityPrice(resolveMaterialPrice("Кирпич", pricing, "Астана"), "Астана")}`,
     },
   ];
 
@@ -54,7 +54,7 @@ export function MaterialsComparison({ rows, pricing }: { rows: ComparisonRow[]; 
           <p className="text-sm uppercase tracking-[0.3em] text-blue-700">Материалы</p>
           <h2 className="mt-2 text-3xl font-semibold sm:text-4xl">FinnBlock vs Газоблок vs Кирпич</h2>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600">
-            Сравнение по ключевым параметрам для климата и сейсмики Алматы.
+            Сравнение по ключевым параметрам и ориентировочным ценам для Алматы и Астаны.
           </p>
         </div>
 

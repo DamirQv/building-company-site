@@ -1,15 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LeadForm } from "../components/lead-form";
+import { formatCityPrice, getPricingData, resolveMaterialPrice } from "@/lib/pricing";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Строительство домов в Астане — Standard Stroy",
   description:
-    "Строим дома в Астане под ключ: FinnBlock, газоблок, кирпич. Фиксированная смета, онлайн-камера, гарантия 10 лет. От 135 000 ₸/м². Бесплатный выезд инженера.",
+    "Строим дома в Астане под ключ: FinnBlock, газоблок, кирпич. Фиксированная смета, онлайн-камера, гарантия 10 лет. Бесплатный выезд инженера.",
   alternates: { canonical: "/astana" },
 };
 
-export default function AstanaPage() {
+export default async function AstanaPage() {
+  const pricing = await getPricingData();
+
   return (
     <main className="min-h-screen bg-blue-50 px-6 py-24 text-slate-900 sm:px-8 lg:px-12">
       <div className="mx-auto max-w-5xl">
@@ -31,8 +36,21 @@ export default function AstanaPage() {
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900">Цены</h2>
             <p className="mt-3 text-sm leading-7 text-slate-600">
-              Коробка — от 135 000 ₸/м². Под ключ — от 200 000 ₸/м².
-              Смета фиксируется в договоре.
+              Ориентировочная цена за м² по материалу:
+            </p>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+              {[
+                ["Газоблок", "Газоблок"],
+                ["Кирпич", "Кирпич"],
+                ["FinnBlock", "FinnBlock"],
+              ].map(([label, material]) => (
+                <li key={material}>
+                  {label} — {formatCityPrice(resolveMaterialPrice(material, pricing, "Астана"), "Астана")}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              Предварительная цена, не является сметой. Итоговая стоимость зависит от проекта и участка.
             </p>
           </div>
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">

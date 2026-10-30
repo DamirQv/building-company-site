@@ -19,7 +19,7 @@ import {
   testimonials,
   documents,
 } from "@/lib/content";
-import { formatPrice, getPricingData } from "@/lib/pricing";
+import { formatCityPrice, getPricingDataWithSource } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -76,12 +76,11 @@ const processSteps = [
 ];
 
 export default async function Home() {
-  const pricing = await getPricingData();
+  const { pricing, source: pricingSource } = await getPricingDataWithSource();
   const newsResult = await getPublishedNewsResult();
   const recentArticles = newsResult.ok ? newsToBlogArticles(newsResult.items).slice(0, 3) : [];
-  const basePrice = pricing.length > 0
-    ? Math.min(...pricing.map((entry) => entry.pricePerM2))
-    : 135000;
+  const almatyBasePrice = Math.min(...pricing.map((entry) => entry.pricePerM2));
+  const astanaBasePrice = Math.min(...pricing.map((entry) => entry.astanaPricePerM2));
 
   return (
     <main className="min-h-screen bg-blue-50 text-slate-900">
@@ -121,7 +120,7 @@ export default async function Home() {
                 ))}
               </ul>
               <p className="mt-6 text-lg text-slate-700 sm:text-xl">
-                От {formatPrice(basePrice)}
+                Алматы: {formatCityPrice(almatyBasePrice, "Алматы")} · Астана: {formatCityPrice(astanaBasePrice, "Астана")}
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
                 <a
@@ -166,7 +165,7 @@ export default async function Home() {
           </div>
           <div className="text-sm text-slate-600">Быстро • Точно • Без переплат</div>
         </div>
-        <LeadQuiz pricing={pricing} />
+        <LeadQuiz pricing={pricing} pricingSource={pricingSource} />
       </section>
 
       {/* Блок 3 — Почему Standard Stroy (объединённый блок доверия и преимуществ) */}

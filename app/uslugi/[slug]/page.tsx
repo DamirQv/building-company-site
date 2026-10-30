@@ -47,11 +47,13 @@ export default async function ServicePage({
       url: "https://dombuilding.kz",
     },
     areaServed: "Алматы, Астана",
-    offers: {
-      "@type": "Offer",
-      price: service.price,
-      priceCurrency: "KZT",
-    },
+    ...(service.slug !== "stroitelstvo-korobki" && {
+      offers: {
+        "@type": "Offer",
+        price: service.price,
+        priceCurrency: "KZT",
+      },
+    }),
   };
 
   return (

@@ -2,7 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { materialsData, getMaterialBySlug } from "@/lib/materials";
+import { formatCityPrice, getPricingData, resolveMaterialPrice } from "@/lib/pricing";
 import { LeadForm } from "../../components/lead-form";
+
+export const dynamic = "force-dynamic";
+
+const materialBySlug: Record<string, string> = {
+  "doma-iz-finnblock": "FinnBlock",
+  "doma-iz-gazobloka": "Газоблок",
+  "doma-iz-kirpicha": "Кирпич",
+};
 
 export function generateStaticParams() {
   return materialsData.map((m) => ({ slug: m.slug }));
@@ -36,6 +45,9 @@ export default async function MaterialPage({
     notFound();
   }
 
+  const pricing = await getPricingData();
+  const pricingMaterial = materialBySlug[material.slug];
+
   return (
     <main className="min-h-screen bg-[#f8f9fa] px-6 py-24 text-zinc-800 sm:px-8 lg:px-12">
       <div className="mx-auto max-w-5xl">
@@ -43,8 +55,14 @@ export default async function MaterialPage({
         <h1 className="mt-4 text-4xl font-semibold sm:text-5xl">{material.h1}</h1>
         <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-600">{material.description}</p>
 
-        <div className="mt-8 inline-flex rounded-2xl border border-zinc-200 bg-white px-6 py-4 shadow-sm">
-          <p className="text-lg font-semibold text-zinc-900">{material.price}</p>
+        <div className="mt-8 rounded-2xl border border-zinc-200 bg-white px-6 py-4 shadow-sm">
+          <p className="text-sm font-semibold text-zinc-900">
+            Алматы: {formatCityPrice(resolveMaterialPrice(pricingMaterial, pricing), "Алматы")}
+          </p>
+          <p className="mt-1 text-sm font-semibold text-zinc-900">
+            Астана: {formatCityPrice(resolveMaterialPrice(pricingMaterial, pricing, "Астана"), "Астана")}
+          </p>
+          <p className="mt-2 text-xs text-zinc-500">Предварительная цена; точная смета зависит от проекта и участка.</p>
         </div>
 
         <div className="mt-12 grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
