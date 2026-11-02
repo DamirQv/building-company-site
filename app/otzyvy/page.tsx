@@ -15,8 +15,7 @@ export default function OtzyvyPage() {
         <p className="text-sm uppercase tracking-[0.3em] text-orange-500">Отзывы</p>
         <h1 className="mt-4 text-4xl font-semibold sm:text-5xl">Отзывы наших клиентов</h1>
         <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-600">
-          Приоритет — видеоотзывы на фоне готового дома. Дополнительно: скриншоты переписок
-          и отзывы из 2GIS. Все отзывы — от реальных клиентов.
+          Отзывы клиентов о сотрудничестве со Standard Stroy.
         </p>
 
         <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -34,9 +33,6 @@ export default function OtzyvyPage() {
           ))}
         </div>
 
-        <p className="mt-8 text-xs text-zinc-400">
-          * Отзывы — плейсхолдеры. Замените на реальные видеоотзывы, скриншоты переписок и отзывы 2GIS.
-        </p>
       </div>
     </main>
   );

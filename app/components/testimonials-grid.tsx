@@ -24,7 +24,7 @@ export function TestimonialsGrid({ items }: { items: Testimonial[] }) {
           <p className="text-sm uppercase tracking-[0.3em] text-blue-700">Отзывы</p>
           <h2 className="mt-2 text-3xl font-semibold sm:text-4xl">Что говорят клиенты</h2>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600">
-            Приоритет — видеоотзывы на фоне готового дома. Дополнительно: скриншоты переписок и отзывы из 2GIS.
+            Отзывы клиентов о сотрудничестве со Standard Stroy.
           </p>
         </div>
 
