@@ -50,12 +50,8 @@ export default function AboutPage() {
               <p className="mt-1 font-medium">+7 (777) 050-08-03</p>
             </div>
             <div>
-              <p className="text-zinc-400">Email</p>
-              <p className="mt-1 font-medium">info@dombuilding.kz</p>
-            </div>
-            <div>
               <p className="text-zinc-400">Сайт</p>
-              <p className="mt-1 font-medium">dombuilding.kz</p>
+              <p className="mt-1 font-medium">standardstroy.kz</p>
             </div>
             <div>
               <p className="text-zinc-400">География</p>

@@ -4,7 +4,7 @@ import { getPublishedNews } from "@/lib/news";
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = "https://dombuilding.kz";
+  const baseUrl = "https://standardstroy.kz";
   const now = new Date();
   const publishedNews = await getPublishedNews();
 
@@ -22,7 +22,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/materialy/doma-iz-finnblock`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/materialy/doma-iz-gazobloka`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/materialy/doma-iz-kirpicha`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${baseUrl}/proekty`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${baseUrl}/obekty`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
     { url: `${baseUrl}/o-kompanii`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${baseUrl}/otzyvy`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },

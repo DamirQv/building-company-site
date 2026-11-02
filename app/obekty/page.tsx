@@ -1,12 +1,11 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { builtObjects } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Построенные объекты — Standard Stroy, Алматы",
   description:
-    "Проекты и этапы строительства домов Standard Stroy в Алматы, Каскелене и Талгаре. Фото, площадь, материал, город и описание.",
+    "Проекты и этапы строительства домов Standard Stroy в Алматы, Каскелене и Талгаре: площадь, материал, город и описание.",
   alternates: { canonical: "/obekty" },
 };
 
@@ -23,20 +22,6 @@ export default function ObektyPage() {
         <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {builtObjects.map((obj) => (
             <article key={obj.slug} className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-              <Link href={`/obekty/${obj.slug}`} className="block">
-                <div className="relative h-56 w-full overflow-hidden bg-zinc-200">
-                  <Image
-                    src={obj.image ?? obj.afterImage}
-                    alt={`${obj.title} — ${obj.material ?? "объект"}, ${obj.area ?? "объект"}`}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                    className="object-cover transition duration-500 hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0b2a4a]/70 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4 text-sm font-medium text-white">Посмотреть объект →</div>
-                </div>
-              </Link>
-
               <div className="p-6">
                 <Link href={`/obekty/${obj.slug}`} className="block">
                   <h2 className="text-lg font-semibold text-zinc-900">{obj.title}</h2>

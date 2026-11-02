@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/private/", "/api/"],
     },
-    sitemap: "https://dombuilding.kz/sitemap.xml",
-    host: "https://dombuilding.kz",
+    sitemap: "https://standardstroy.kz/sitemap.xml",
+    host: "https://standardstroy.kz",
   };
 }

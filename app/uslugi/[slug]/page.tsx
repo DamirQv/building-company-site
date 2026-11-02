@@ -44,7 +44,7 @@ export default async function ServicePage({
     provider: {
       "@type": "Organization",
       name: "Standard Stroy",
-      url: "https://dombuilding.kz",
+      url: "https://standardstroy.kz",
     },
     areaServed: "Алматы, Астана",
     ...(service.slug !== "stroitelstvo-korobki" && {

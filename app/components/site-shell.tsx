@@ -9,10 +9,6 @@ import { trackCallbackClick, trackContact } from "@/lib/analytics-events";
 const navItems = [
   { href: "/o-kompanii", label: "О компании" },
   { href: "/uslugi", label: "Услуги" },
-  // ⚠️ ВРЕМЕННО СКРЫТО из верхней навигации (страницы /proekty и /obekty продолжают работать).
-  // Для возврата раскомментируйте строки ниже:
-  // { href: "/proekty", label: "Проекты" },
-  // { href: "/obekty", label: "Объекты" },
   { href: "/otzyvy", label: "Отзывы" },
   { href: "/blog", label: "Статьи" },
   { href: "/kontakty", label: "Контакты" },
@@ -32,7 +28,6 @@ const breadcrumbLabels: Record<string, string> = {
   "doma-iz-finnblock": "Дома из FinnBlock",
   "doma-iz-gazobloka": "Дома из газоблока",
   "doma-iz-kirpicha": "Дома из кирпича",
-  proekty: "Проекты",
   obekty: "Построенные объекты",
   otzyvy: "Отзывы",
   kontakty: "Контакты",
@@ -41,7 +36,6 @@ const breadcrumbLabels: Record<string, string> = {
   "politika-konfidencialnosti": "Политика конфиденциальности",
   about: "О компании",
   services: "Услуги",
-  projects: "Проекты",
   reviews: "Отзывы",
   contacts: "Контакты",
   privacy: "Политика конфиденциальности",
@@ -62,7 +56,7 @@ const COMPANY = {
 export function buildWhatsAppHref(blockCode: string, customText?: string) {
   const text =
     customText ??
-    `Здравствуйте! Пишу с сайта dombuilding.kz [${blockCode}]`;
+    `Здравствуйте! Пишу с сайта standardstroy.kz [${blockCode}]`;
   return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(text)}`;
 }
 
@@ -163,13 +157,6 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
           <button type="button" onClick={() => setMenuOpen((open) => !open)} className="inline-flex h-10 w-10 items-center justify-center border border-slate-300 text-slate-800 lg:hidden" aria-label="Открыть меню" aria-expanded={menuOpen}>
             <span className="text-xl leading-none">{menuOpen ? "×" : "☰"}</span>
           </button>
-          <Link
-            href="/kontakty"
-            className="hidden"
-          >
-            <span className="sr-only">Получить консультацию</span>
-            <span className="text-lg">✉️</span>
-          </Link>
         </div>
         {menuOpen && (
           <div className="border-t border-slate-200 bg-white lg:hidden">
@@ -232,7 +219,6 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
             <div className="mt-3 flex flex-col gap-2">
               <Link href="/o-kompanii" className="transition hover:text-slate-900">О компании</Link>
               <Link href="/uslugi" className="transition hover:text-slate-900">Услуги</Link>
-              <Link href="/proekty" className="transition hover:text-slate-900">Проекты</Link>
               <Link href="/obekty" className="transition hover:text-slate-900">Построенные объекты</Link>
               <Link href="/otzyvy" className="transition hover:text-slate-900">Отзывы</Link>
               <Link href="/blog" className="transition hover:text-slate-900">Статьи</Link>
@@ -267,7 +253,6 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
                 </a>
               </div>
               <Link href="/politika-konfidencialnosti" className="transition hover:text-slate-900">Политика конфиденциальности</Link>
-              <a href="/oferta.pdf" className="transition hover:text-zinc-900">Образец договора</a>
             </div>
           </div>
         </div>

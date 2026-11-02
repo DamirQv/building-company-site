@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { builtObjects } from "@/lib/content";
 
@@ -45,30 +44,6 @@ export default async function ObjectDetailPage({
           <p className="text-sm uppercase tracking-[0.3em] text-blue-700">Объект</p>
           <h1 className="mt-3 text-4xl font-semibold sm:text-5xl">{object.title}</h1>
         </header>
-
-        <div className="mt-10 grid gap-6 md:grid-cols-2">
-          <div className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-white shadow-sm">
-            <Image
-              src={object.beforeImage}
-              alt={`${object.title} до работ`}
-              width={1200}
-              height={800}
-              className="h-full w-full object-cover"
-            />
-            <div className="border-t border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-700">До</div>
-          </div>
-
-          <div className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-white shadow-sm">
-            <Image
-              src={object.afterImage}
-              alt={`${object.title} после работ`}
-              width={1200}
-              height={800}
-              className="h-full w-full object-cover"
-            />
-            <div className="border-t border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-700">После</div>
-          </div>
-        </div>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <section className="rounded-[2rem] border border-zinc-200 bg-white p-8 shadow-sm">

@@ -19,7 +19,7 @@ import {
   testimonials,
   documents,
 } from "@/lib/content";
-import { formatCityPrice, getPricingDataWithSource } from "@/lib/pricing";
+import { getPricingDataWithSource } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -28,13 +28,6 @@ const stats = [
   { value: "320+", label: "реализованных объектов" },
   { value: "500+", label: "довольных клиентов" },
   { value: "10 лет", label: "гарантии" },
-];
-
-const heroBullets = [
-  "Фиксированная смета в договоре",
-  "Онлайн-камера на объекте",
-  "Оплата по актам за этап",
-  "Гарантия 10 лет",
 ];
 
 const whyCards = [
@@ -79,8 +72,6 @@ export default async function Home() {
   const { pricing, source: pricingSource } = await getPricingDataWithSource();
   const newsResult = await getPublishedNewsResult();
   const recentArticles = newsResult.ok ? newsToBlogArticles(newsResult.items).slice(0, 3) : [];
-  const almatyBasePrice = Math.min(...pricing.map((entry) => entry.pricePerM2));
-  const astanaBasePrice = Math.min(...pricing.map((entry) => entry.astanaPricePerM2));
 
   return (
     <main className="min-h-screen bg-blue-50 text-slate-900">
@@ -96,60 +87,6 @@ export default async function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-[#0B2A4A]/95 via-[#155A8A]/70 to-transparent" />
         <div className="relative mx-auto min-h-[calc(100svh-73px)] max-w-7xl px-6 sm:px-8 lg:px-12">
           <HeroContent />
-        </div>
-        <div className="hidden" />
-        <div className="hidden">
-          <div className="grid items-end gap-10 py-20 lg:grid-cols-[1.15fr_0.85fr] lg:py-28">
-            <div className="max-w-3xl">
-              <div className="mb-5 flex flex-wrap items-center gap-3">
-                <span className="rounded-full border border-blue-200 bg-blue-500/10 px-3 py-1 text-sm font-medium text-blue-700">
-                  Standard Stroy
-                </span>
-                <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-sm text-slate-700">
-                  Дом под ключ • Алматы, Астана и пригороды
-                </span>
-              </div>
-              <h1 className="text-4xl font-semibold leading-tight text-slate-900 sm:text-5xl lg:text-6xl">
-                Построим дом в Алматы по фиксированной смете — и вы будете видеть стройку из телефона
-              </h1>
-              <ul className="mt-6 grid gap-2 sm:grid-cols-2">
-                {heroBullets.map((bullet) => (
-                  <li key={bullet} className="flex items-center gap-2 text-sm text-slate-700">
-                    <span className="text-blue-700">✓</span> {bullet}
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-6 text-lg text-slate-700 sm:text-xl">
-                Алматы: {formatCityPrice(almatyBasePrice, "Алматы")} · Астана: {formatCityPrice(astanaBasePrice, "Астана")}
-              </p>
-              <div className="mt-8 flex flex-wrap gap-4">
-                <a
-                  href="#quiz"
-                  className="rounded-full bg-blue-900 px-7 py-3 font-medium text-white transition hover:bg-blue-800"
-                >
-                  Рассчитать стоимость моего дома
-                </a>
-                <a
-                  href="https://wa.me/77770500803?text=Здравствуйте!%20Пишу%20с%20сайта%20dombuilding.kz%20[S-HERO]"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-full border border-slate-200 bg-white px-7 py-3 font-medium text-slate-900 transition hover:bg-slate-100"
-                >
-                  Написать в WhatsApp
-                </a>
-              </div>
-            </div>
-
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-              <p className="text-sm uppercase tracking-[0.3em] text-blue-700">Что вы получаете</p>
-              <ul className="mt-6 space-y-4 text-sm text-zinc-100">
-                <li>• Фиксированная смета в договоре — без удорожаний</li>
-                <li>• Онлайн-камера на объекте — стройка из телефона</li>
-                <li>• Оплата по актам за этап — платите за сделанное</li>
-                <li>• Гарантия 10 лет на несущие конструкции</li>
-              </ul>
-            </div>
-          </div>
         </div>
       </section>
 

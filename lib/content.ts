@@ -96,9 +96,8 @@ export function organizationJsonLd() {
     "@type": "GeneralContractor",
     name: "Standard Stroy",
     legalName: "ТОО «Эко Дом Билдинг»",
-    url: "https://dombuilding.kz",
+    url: "https://standardstroy.kz",
     telephone: "+77770500803",
-    email: "info@dombuilding.kz",
     areaServed: ["Алматы", "Астана", "Каскелен", "Талгар"],
     address: {
       "@type": "PostalAddress",

@@ -5,7 +5,7 @@ import { Analytics } from "./components/analytics";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://dombuilding.kz"),
+  metadataBase: new URL("https://standardstroy.kz"),
   title: {
     default: "Standard Stroy — строительство домов под ключ в Алматы и Астане",
     template: "%s | Standard Stroy",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "ru_KZ",
-    url: "https://dombuilding.kz",
+    url: "https://standardstroy.kz",
     siteName: "Standard Stroy",
     title: "Standard Stroy — строительство домов под ключ в Алматы и Астане",
     description:
