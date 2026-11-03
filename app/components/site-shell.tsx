@@ -151,7 +151,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
           <div className="hidden items-center gap-4 lg:flex">
-            <a href="tel:+77770500803" className="whitespace-nowrap text-sm font-semibold text-slate-900 transition hover:text-sky-700">+7 777 050 08 03</a>
+            <a href="tel:+77719444295" className="whitespace-nowrap text-sm font-semibold text-slate-900 transition hover:text-sky-700">+7 771 944 42 95</a>
             <Link href="/kontakty" onClick={() => trackCallbackClick("header")} className="inline-flex items-center justify-center bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-800">Заказать обратный звонок</Link>
           </div>
           <button type="button" onClick={() => setMenuOpen((open) => !open)} className="inline-flex h-10 w-10 items-center justify-center border border-slate-300 text-slate-800 lg:hidden" aria-label="Открыть меню" aria-expanded={menuOpen}>
@@ -166,7 +166,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
                   {item.label}
                 </Link>
               ))}
-              <a href="tel:+77770500803" className="pt-4 text-base font-semibold text-slate-950">+7 777 050 08 03</a>
+              <a href="tel:+77719444295" className="pt-4 text-base font-semibold text-slate-950">+7 771 944 42 95</a>
               <Link href="/kontakty" onClick={() => { trackCallbackClick("header"); setMenuOpen(false); }} className="mt-4 inline-flex items-center justify-center bg-sky-700 px-4 py-3 text-sm font-semibold text-white">Заказать обратный звонок</Link>
             </nav>
           </div>
