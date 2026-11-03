@@ -6,9 +6,9 @@ import { motion } from "framer-motion";
 
 const currentProjects = [
   {
-    name: "Шукшина",
-    image: "/current-projects/shukshina.jpeg",
-    alt: "Дом Standard Stroy — Шукшина",
+    name: "Зверева",
+    image: "/current-projects/zvereva.jpeg",
+    alt: "Дом Standard Stroy — Зверева",
     position: "object-center",
     district: "Медеуский",
     area: "190,17 м²",
@@ -17,7 +17,7 @@ const currentProjects = [
   },
   {
     name: "Талгар",
-    image: "/current-projects/talgar.jpeg",
+    image: "/current-projects/talgar-current.jpeg",
     alt: "Дом Standard Stroy — Талгар",
     position: "object-center",
     district: "Талгарский район",
@@ -150,6 +150,15 @@ export function CurrentProjectsSection() {
             <h3 id="current-project-modal-title" className="mt-4 pr-10 text-2xl font-semibold text-slate-900 sm:text-3xl">
               {selectedProject.name}
             </h3>
+            <div className="relative mt-5 aspect-[16/10] overflow-hidden rounded-2xl bg-slate-100">
+              <Image
+                src={selectedProject.image}
+                alt={selectedProject.alt}
+                fill
+                sizes="(max-width: 640px) calc(100vw - 4rem), 384px"
+                className={`object-cover ${selectedProject.position}`}
+              />
+            </div>
             <dl className="mt-5 space-y-3">
               {[
                 { label: "Район", value: selectedProject.district },

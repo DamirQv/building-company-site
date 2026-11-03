@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
 import { testimonials } from "@/lib/content";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
+  path: "/otzyvy",
   title: "Отзывы — Standard Stroy, строительство домов в Алматы",
   description:
     "Видеоотзывы и отзывы клиентов Standard Stroy о строительстве домов в Алматы, Каскелене, Талгаре. Реальные истории — без постановочных отзывов.",
-  alternates: { canonical: "/otzyvy" },
-};
+});
 
 export default function OtzyvyPage() {
   return (
@@ -18,18 +18,34 @@ export default function OtzyvyPage() {
           Отзывы клиентов о сотрудничестве со Standard Stroy.
         </p>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-2">
           {testimonials.map((item) => (
-            <blockquote key={item.name} className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
-              <span className="inline-block rounded-full bg-orange-50 px-2 py-1 text-xs text-orange-600">
+            <figure key={item.name} className="flex min-h-[19rem] flex-col rounded-[1.75rem] border border-slate-200 bg-white p-8 shadow-sm sm:p-9">
+              <span className="inline-flex w-fit items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
                 {item.type}
               </span>
-              <p className="mt-4 text-sm leading-7 text-zinc-700">«{item.text}»</p>
-              <div className="mt-4">
-                <div className="font-medium text-zinc-900">{item.name}</div>
-                <div className="text-xs text-zinc-500">{item.object}</div>
-              </div>
-            </blockquote>
+              {item.text ? (
+                <blockquote className="mt-6 flex-1">
+                  <p className="text-base leading-8 text-slate-700">«{item.text}»</p>
+                </blockquote>
+              ) : (
+                <div className="mt-6 flex-1" />
+              )}
+              <figcaption className="mt-6 border-t border-slate-100 pt-5">
+                <div className="font-medium text-slate-900">{item.name}</div>
+                <div className="mt-0.5 text-xs text-slate-500">{item.object}</div>
+                {item.date && <div className="mt-1 text-xs text-slate-500">{item.date}</div>}
+                <div className="mt-2 text-xs text-slate-500">Источник: {item.source}</div>
+                <a
+                  href={item.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-blue-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-900"
+                >
+                  {item.source === "Instagram" ? "Смотреть видеоотзыв" : "Смотреть отзыв в 2GIS"}
+                </a>
+              </figcaption>
+            </figure>
           ))}
         </div>
 

@@ -1,16 +1,16 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { LeadForm } from "../components/lead-form";
 import { formatCityPrice, getPricingData, resolveMaterialPrice } from "@/lib/pricing";
+import { createPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
+  path: "/astana",
   title: "Строительство домов в Астане — Standard Stroy",
   description:
-    "Строим дома в Астане под ключ: FinnBlock, газоблок, кирпич. Фиксированная смета, онлайн-камера, гарантия 10 лет. Бесплатный выезд инженера.",
-  alternates: { canonical: "/astana" },
-};
+    "Строим дома в Астане под ключ из FinnBlock, газоблока и кирпича. Стоимость работ фиксируем в договоре, показываем стройку через онлайн-камеру, даём гарантию 10 лет. Бесплатный выезд инженера.",
+});
 
 export default async function AstanaPage() {
   const pricing = await getPricingData();
@@ -21,8 +21,8 @@ export default async function AstanaPage() {
         <p className="text-sm uppercase tracking-[0.3em] text-blue-700">Астана</p>
         <h1 className="mt-4 text-4xl font-semibold sm:text-5xl">Строительство домов в Астане</h1>
         <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600">
-          Standard Stroy строит дома в Астане под ключ. Фиксированная смета в договоре,
-          онлайн-камера на объекте, оплата по актам за этап. Гарантия 10 лет на несущие конструкции.
+          Standard Stroy строит дома в Астане под ключ. Стоимость работ фиксируем в договоре,
+          показываем стройку через онлайн-камеру, принимаем оплату по актам за этап. Гарантия 10 лет на несущие конструкции.
         </p>
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -50,7 +50,7 @@ export default async function AstanaPage() {
               ))}
             </ul>
             <p className="mt-3 text-sm leading-7 text-slate-600">
-              Предварительная цена, не является сметой. Итоговая стоимость зависит от проекта и участка.
+              Цены ориентировочные; итоговая стоимость зависит от проекта и участка.
             </p>
           </div>
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">

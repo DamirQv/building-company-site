@@ -133,11 +133,7 @@ const MATERIAL_IDS: Record<string, number> = {
 
 const QUIZ_AREA_MIN = 30;
 const QUIZ_AREA_MAX = 1000;
-const QUIZ_FINISH_FACTORS: Record<string, number> = {
-  "Коробка дома": 0.6,
-  Предчистовая: 0.8,
-  "Под ключ": 1.0,
-};
+const QUIZ_FINISH_LEVEL = "Коробка дома";
 
 function normalizeQuizMaterial(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -207,11 +203,8 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
-      typeof body.finish_level !== "string" ||
-      !Object.prototype.hasOwnProperty.call(QUIZ_FINISH_FACTORS, body.finish_level)
-    ) {
-      return NextResponse.json({ ok: false, error: "Выберите допустимый уровень комплектации" }, { status: 400 });
+    if (body.finish_level !== QUIZ_FINISH_LEVEL) {
+      return NextResponse.json({ ok: false, error: "Комплектация должна быть «Коробка дома»" }, { status: 400 });
     }
 
     const pricing = await getPricingData();
@@ -221,18 +214,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "Не удалось рассчитать стоимость. Попробуйте позже" }, { status: 503 });
     }
 
-    const base = areaM2 * pricePerM2 * QUIZ_FINISH_FACTORS[body.finish_level];
-    const estimateMin = Math.round(base * 0.85);
-    const estimateMax = Math.round(base * 1.15);
+    const estimate = Math.round(areaM2 * pricePerM2);
     effectiveBody = {
       ...body,
       city: body.city,
       material,
       area_m2: areaM2,
-      finish_level: body.finish_level,
+      finish_level: QUIZ_FINISH_LEVEL,
       price_per_m2: pricePerM2,
-      estimate_min: estimateMin,
-      estimate_max: estimateMax,
+      estimate_min: estimate,
+      estimate_max: estimate,
     };
   }
 

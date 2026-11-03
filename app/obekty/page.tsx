@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { builtObjects } from "@/lib/content";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
+  path: "/obekty",
   title: "Построенные объекты — Standard Stroy, Алматы",
   description:
     "Проекты и этапы строительства домов Standard Stroy в Алматы, Каскелене и Талгаре: площадь, материал, город и описание.",
-  alternates: { canonical: "/obekty" },
-};
+});
 
 export default function ObektyPage() {
   return (

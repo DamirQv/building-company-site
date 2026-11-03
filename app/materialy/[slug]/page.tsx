@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { materialsData, getMaterialBySlug } from "@/lib/materials";
 import { formatCityPrice, getPricingData, resolveMaterialPrice } from "@/lib/pricing";
 import { LeadForm } from "../../components/lead-form";
+import { createPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -26,11 +27,11 @@ export async function generateMetadata({
   const material = getMaterialBySlug(slug);
   if (!material) return {};
 
-  return {
+  return createPageMetadata({
+    path: `/materialy/${material.slug}`,
     title: material.title,
     description: material.description,
-    alternates: { canonical: `/materialy/${material.slug}` },
-  };
+  });
 }
 
 export default async function MaterialPage({
@@ -62,7 +63,7 @@ export default async function MaterialPage({
           <p className="mt-1 text-sm font-semibold text-zinc-900">
             Астана: {formatCityPrice(resolveMaterialPrice(pricingMaterial, pricing, "Астана"), "Астана")}
           </p>
-          <p className="mt-2 text-xs text-zinc-500">Предварительная цена; точная смета зависит от проекта и участка.</p>
+          <p className="mt-2 text-xs text-zinc-500">Цены ориентировочные; итоговая стоимость зависит от проекта и участка.</p>
         </div>
 
         <div className="mt-12 grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">

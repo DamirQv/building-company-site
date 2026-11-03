@@ -1,5 +1,13 @@
 import Link from "next/link";
 import { LeadForm } from "@/app/components/lead-form";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata = createPageMetadata({
+  path: "/kontakty",
+  title: "Контакты Standard Stroy — строительство домов в Алматы и Астане",
+  description:
+    "Свяжитесь со Standard Stroy по телефону или WhatsApp либо оставьте заявку на консультацию по строительству дома в Алматы и Астане.",
+});
 
 export default function ContactsPage() {
   return (
@@ -31,7 +39,7 @@ export default function ContactsPage() {
               <div className="mt-10 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-800">
                 <p className="font-semibold">Хотите расчёт дома?</p>
                 <p className="mt-2">
-                  Если вы хотите рассчитать стоимость дома и получить приблизительную смету,
+                  Если вы хотите рассчитать стоимость дома и получить предварительный расчёт,
                   вернитесь на главную страницу и нажмите «Рассчитать стоимость моего дома».
                 </p>
                 <Link

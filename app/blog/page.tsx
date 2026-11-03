@@ -1,14 +1,14 @@
-import type { Metadata } from "next";
 import { getPublishedNewsResult, newsToBlogArticles } from "@/lib/news";
 import { BlogArchive } from "../components/blog-archive";
 import { BlogStateNotice } from "../components/blog-state-notice";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
+  path: "/blog",
   title: "Новости и статьи — Standard Stroy",
   description:
     "Новости и публикации Standard Stroy о строительстве домов и ходе работ.",
-  alternates: { canonical: "/blog" },
-};
+});
 
 export default async function BlogPage() {
   const result = await getPublishedNewsResult();

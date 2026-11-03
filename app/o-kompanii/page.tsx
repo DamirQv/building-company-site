@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { companyBenefits } from "@/lib/content";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
+  path: "/o-kompanii",
   title: "О компании Standard Stroy — строительство домов в Алматы",
   description:
-    "Standard Stroy (ТОО «Эко Дом Билдинг») — 15 лет на рынке строительства, 320+ объектов. Фиксированная смета, онлайн-камера, гарантия 10 лет. Алматы, Астана.",
-  alternates: { canonical: "/o-kompanii" },
-};
+    "Standard Stroy (ТОО «Эко Дом Билдинг») — 15 лет на рынке строительства, 320+ объектов. Стоимость работ фиксируем в договоре, онлайн-камера, гарантия 10 лет. Алматы, Астана.",
+});
 
 export default function AboutPage() {
   return (
@@ -20,8 +20,8 @@ export default function AboutPage() {
         <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-600">
           Мы строим дома в Алматы, Астане и пригородах уже более 15 лет.
           За это время сдали 320+ объектов — от компактных домов 100 м²
-          до коробки дома 240 м². Наш принцип: фиксированная смета, оплата по актам
-          и онлайн-камера на каждом объекте.
+          до коробки дома 240 м². Наш принцип: фиксируем стоимость работ в договоре, принимаем оплату
+          по актам и предоставляем онлайн-доступ к камерам на объектах.
         </p>
 
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

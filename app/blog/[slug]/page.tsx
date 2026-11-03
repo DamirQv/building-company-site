@@ -6,6 +6,7 @@ import { getPublishedNewsResult, newsToBlogArticles } from "@/lib/news";
 import { ArticleCard } from "../../components/article-card";
 import { ArticleImageCarousel } from "../../components/article-image-carousel";
 import { BlogStateNotice } from "../../components/blog-state-notice";
+import { createPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,16 +18,22 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const result = await getPublishedNewsResult();
-  if (!result.ok) return { title: "Публикации временно недоступны" };
+  if (!result.ok) {
+    return createPageMetadata({
+      path: `/blog/${slug}`,
+      title: "Публикации временно недоступны",
+      description: "Публикации Standard Stroy временно недоступны.",
+      robots: { index: false, follow: true },
+    });
+  }
   const article = newsToBlogArticles(result.items).find((item) => item.slug === slug);
   if (!article) return {};
 
-  return {
+  return createPageMetadata({
+    path: `/blog/${article.slug}`,
     title: article.metaTitle,
     description: article.description,
-    alternates: { canonical: `/blog/${article.slug}` },
-    ...(article.cover ? { openGraph: { images: [article.cover] } } : {}),
-  };
+  });
 }
 
 function ArticleContent({ article, articles }: { article: BlogArticle; articles: BlogArticle[] }) {

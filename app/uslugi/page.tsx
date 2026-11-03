@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
 import Link from "next/link";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
+  path: "/uslugi",
   title: "Услуги — строительство домов под ключ в Алматы и Астане",
   description:
     "Полный цикл строительства: проектирование, коробка, предчистовая и чистовая отделка, благоустройство. Коммерческие и производственные здания. Отдельный договор на каждый этап.",
-  alternates: { canonical: "/uslugi" },
-};
+});
 
 const services = [
   {

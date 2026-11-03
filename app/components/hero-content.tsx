@@ -5,7 +5,7 @@ import { openCallbackModal } from "./consultation-modal";
 import { trackCallbackClick } from "@/lib/analytics-events";
 
 const benefits = [
-  "Прозрачная смета",
+  "Прозрачная стоимость",
   "Контроль каждого этапа",
   "Гарантия 10 лет",
 ];
@@ -25,7 +25,7 @@ export function HeroContent() {
         Дом под ключ в Алматы
       </motion.h1>
       <motion.p variants={reveal} transition={{ duration: 0.55, ease: "easeOut" }} className="mt-6 max-w-2xl text-base leading-7 text-slate-100 drop-shadow-sm sm:text-lg sm:leading-8">
-        Проектируем и строим частные дома под ключ — от проекта до сдачи. Прозрачная смета, контроль строительства и гарантия на выполненные работы.
+        Проектируем и строим частные дома под ключ — от проекта до сдачи. Прозрачная стоимость, контроль строительства и гарантия на выполненные работы.
       </motion.p>
       <motion.div variants={reveal} transition={{ duration: 0.55, ease: "easeOut" }} className="mt-8 flex flex-col gap-3 sm:flex-row">
         <a href="#quiz" className="inline-flex min-h-12 items-center justify-center bg-sky-700 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-800">Рассчитать стоимость</a>

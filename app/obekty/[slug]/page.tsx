@@ -2,16 +2,31 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { builtObjects } from "@/lib/content";
+import { createPageMetadata } from "@/lib/seo";
 
 export function generateStaticParams() {
   return builtObjects.map((item) => ({ slug: item.slug }));
 }
 
-export function generateMetadata(): Metadata {
-  return {
-    title: "Объект — Standard Stroy",
-    description: "Детальная информация по объекту.",
-  };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const object = builtObjects.find((item) => item.slug === slug);
+  if (!object) return {};
+
+  const details = [object.area, object.material, object.workType, object.city].filter(Boolean);
+  const description =
+    object.description ??
+    `Проект дома Standard Stroy${details.length > 0 ? `: ${details.join(", ")}` : ""}.`;
+
+  return createPageMetadata({
+    path: `/obekty/${object.slug}`,
+    title: object.title,
+    description,
+  });
 }
 
 export default async function ObjectDetailPage({

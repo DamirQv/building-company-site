@@ -205,7 +205,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
           <div>
             <div className="text-lg font-semibold tracking-[0.3em] text-zinc-800 uppercase">Standard Stroy</div>
             <p className="mt-2 max-w-md text-zinc-600">
-              Строительство домов под ключ в Алматы, Астане и пригородах. Фиксированная смета, онлайн-камера на объекте, гарантия 10 лет.
+              Строительство домов под ключ в Алматы, Астане и пригородах. Стоимость работ фиксируется в договоре, онлайн-камера на объекте, гарантия 10 лет.
             </p>
             <div className="mt-4 space-y-1 text-xs text-zinc-500">
               <p>{COMPANY.name}</p>

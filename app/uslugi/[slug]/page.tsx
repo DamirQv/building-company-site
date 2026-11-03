@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { servicesData, getServiceBySlug } from "@/lib/services";
 import { LeadForm } from "../../components/lead-form";
+import { createPageMetadata } from "@/lib/seo";
 
 export function generateStaticParams() {
   return servicesData.map((s) => ({ slug: s.slug }));
@@ -17,11 +18,11 @@ export async function generateMetadata({
   const service = getServiceBySlug(slug);
   if (!service) return {};
 
-  return {
+  return createPageMetadata({
+    path: `/uslugi/${service.slug}`,
     title: service.title,
     description: service.description,
-    alternates: { canonical: `/uslugi/${service.slug}` },
-  };
+  });
 }
 
 export default async function ServicePage({

@@ -10,11 +10,11 @@ import type { PricingEntry, PricingSource } from "@/lib/pricing";
 
 /**
  * Калькулятор стоимости дома для Standard Stroy.
- * Короткий путь: площадь → материал → комплектация → результат → контакт.
- * Расчёт — ориентировочный диапазон в ₸; точная цена — после замера.
+ * Короткий путь: площадь → материал → результат → контакт.
+ * Расчёт: площадь × цена за м² выбранного материала и города.
  */
 
-type CalcStep = "area" | "material" | "finish" | "result" | "contact";
+type CalcStep = "area" | "material" | "result" | "contact";
 
 const MATERIALS = [
   { value: "FinnBlock", label: "FinnBlock" },
@@ -22,25 +22,14 @@ const MATERIALS = [
   { value: "Кирпич", label: "Кирпич" },
 ] as const;
 
-const FINISH_LEVELS = [
-  { value: "Коробка дома", label: "Коробка дома" },
-  { value: "Предчистовая", label: "Предчистовая" },
-  { value: "Под ключ", label: "Под ключ" },
-] as const;
-
-const FINISH_FACTOR: Record<string, number> = {
-  "Коробка дома": 0.6,
-  Предчистовая: 0.8,
-  "Под ключ": 1.0,
-};
+const FINISH_LEVEL = "Коробка дома";
 
 const AREA_MIN = 30;
 const AREA_MAX = 1000;
 
 const STEP_TITLES: Record<string, string> = {
-  area: "Шаг 1 из 3",
-  material: "Шаг 2 из 3",
-  finish: "Шаг 3 из 3",
+  area: "Шаг 1 из 2",
+  material: "Шаг 2 из 2",
   result: "Результат",
   contact: "Контакт",
 };
@@ -58,9 +47,9 @@ export default function LeadQuiz({
 }) {
   const [step, setStep] = useState<CalcStep>("area");
   const [city, setCity] = useState<"Алматы" | "Астана" | "">("");
-  const [area, setArea] = useState("");
+  const [area, setArea] = useState("100");
   const [material, setMaterial] = useState("");
-  const [finishLevel, setFinishLevel] = useState("");
+  const finishLevel = FINISH_LEVEL;
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [consent, setConsent] = useState(false);
@@ -71,21 +60,15 @@ export default function LeadQuiz({
   const estimate = useMemo(() => {
     const areaValue = Number(area ?? 0);
     const pricePerM2 = resolveMaterialPrice(material, pricing, city || "Алматы");
-    const finishFactor = FINISH_FACTOR[finishLevel ?? ""] ?? 1.0;
-    const base = areaValue * pricePerM2 * finishFactor;
-    // Диапазон ±15%
-    return { min: Math.round(base * 0.85), max: Math.round(base * 1.15) };
-  }, [area, material, finishLevel, pricing, city]);
+    const total = Math.round(areaValue * pricePerM2);
+    return { min: total, max: total };
+  }, [area, material, pricing, city]);
 
   const next = () => {
     setError("");
 
-    // Отмечаем начало работы с калькулятором на первом шаге
     if (step === "area") {
       trackQuizStart();
-    }
-
-    if (step === "area") {
       const areaValue = Number(area);
       if (!city) {
         setError("Выберите город строительства");
@@ -103,13 +86,12 @@ export default function LeadQuiz({
       setError("Выберите вариант");
       return;
     }
-    setStep("finish");
+    setStep("result");
   };
 
   const back = () => {
     setError("");
     if (step === "material") setStep("area");
-    else if (step === "finish") setStep("material");
     else if (step === "contact") setStep("result");
   };
 
@@ -172,16 +154,16 @@ export default function LeadQuiz({
           <p className="mt-3 text-sm uppercase tracking-[0.35em] text-blue-700">Готово</p>
           <h3 className="mt-3 text-2xl font-semibold text-slate-900">Заявка принята!</h3>
           <p className="mt-3 text-sm leading-7 text-slate-600">
-            Мы рассчитаем точную смету под ваш участок и пришлём в WhatsApp.
+            Подготовим точный расчёт стоимости строительства с учётом вашего участка и пришлём в WhatsApp.
             Если не ответим в течение 30 минут — проверьте спам.
           </p>
           <div className="mt-6 inline-flex rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-900">
-            {formatCityPrice(resolveMaterialPrice(material, pricing, city || "Алматы"), city || "Алматы")} · {city} · Ориентировочно: от {formatKzt(estimate.min)} до {formatKzt(estimate.max)} ₸
+            {formatCityPrice(resolveMaterialPrice(material, pricing, city || "Алматы"), city || "Алматы")} · {city} · Ориентировочно: {formatKzt(estimate.min)} ₸
           </div>
           <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
               href={`https://wa.me/77770500803?text=${encodeURIComponent(
-                "Здравствуйте! Хочу получить точный расчёт стоимости дома.\nГород: " + (city || "—") + "\nМатериал: " + (material || "—") + "\nЦена за м²: " + formatCityPrice(resolveMaterialPrice(material, pricing, city || "Алматы"), city || "Алматы") + "\nПлощадь: " + (area || "—") + " м²\nОтделка: " + (finishLevel || "—") + "\nОриентировочный диапазон: от " + formatKzt(estimate.min) + " до " + formatKzt(estimate.max) + " ₸\nСайт Standard Stroy [S-QUIZ]"
+                "Здравствуйте! Хочу получить точный расчёт стоимости дома.\nГород: " + (city || "—") + "\nМатериал: " + (material || "—") + "\nЦена за м²: " + formatCityPrice(resolveMaterialPrice(material, pricing, city || "Алматы"), city || "Алматы") + "\nПлощадь: " + (area || "—") + " м²\nОтделка: " + (finishLevel || "—") + "\nОриентировочная стоимость: " + formatKzt(estimate.min) + " ₸\nСайт Standard Stroy [S-QUIZ]"
               )}`}
               target="_blank"
               rel="noreferrer"
@@ -219,7 +201,7 @@ export default function LeadQuiz({
       <div className="mt-6 h-2 rounded-full bg-slate-100">
         <div
           className="h-2 rounded-full bg-blue-900 transition-all"
-          style={{ width: `${step === "area" ? 25 : step === "material" ? 50 : step === "finish" ? 75 : 100}%` }}
+          style={{ width: `${step === "area" ? 50 : 100}%` }}
         />
       </div>
 
@@ -325,50 +307,12 @@ export default function LeadQuiz({
           </div>
         )}
 
-        {step === "finish" && (
-          <div>
-            <div className="text-lg font-medium text-slate-900">Какой уровень готовности?</div>
-            <p className="mt-1 text-sm text-slate-500">Выберите комплектацию — от коробки до «под ключ»</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {FINISH_LEVELS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    setFinishLevel(option.value);
-                    setError("");
-                    setStep("result");
-                  }}
-                  className={`rounded-2xl border px-5 py-4 text-left text-sm transition ${
-                    finishLevel === option.value
-                      ? "border-blue-700 bg-blue-50 text-slate-900"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            {error && <p className="mt-3 text-sm text-rose-300">{error}</p>}
-            <div className="mt-6">
-              <button
-                type="button"
-                onClick={back}
-                disabled={status === "loading"}
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-700 transition hover:border-slate-300 disabled:opacity-40"
-              >
-                Назад
-              </button>
-            </div>
-          </div>
-        )}
-
         {step === "result" && (
           <div>
             <div className="text-lg font-medium text-slate-900">Ориентировочная стоимость</div>
             <div className="mt-4 rounded-[2rem] border border-blue-200 bg-blue-50 p-6 text-center">
               <div className="text-2xl font-semibold text-slate-900 sm:text-3xl">
-                {formatKzt(estimate.min)}–{formatKzt(estimate.max)} ₸
+                {formatKzt(estimate.min)} ₸
               </div>
               <div className="mt-2 inline-flex rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-900">
                 {formatCityPrice(resolveMaterialPrice(material, pricing, city || "Алматы"), city || "Алматы")} · {city} · {area} м² · {finishLevel}
@@ -402,7 +346,7 @@ export default function LeadQuiz({
         {step === "contact" && (
           <div>
             <div className="text-lg font-medium text-slate-900">Получить точный расчёт</div>
-            <p className="mt-1 text-sm text-slate-500">Оставьте контакты — пришлём смету под ваш участок</p>
+            <p className="mt-1 text-sm text-slate-500">Оставьте контакты — подготовим расчёт стоимости с учётом вашего участка</p>
             <div className="mt-4 space-y-3">
               <input
                 value={name}
@@ -475,7 +419,7 @@ export default function LeadQuiz({
       </motion.div>
 
       <p className="mt-6 text-xs text-zinc-500">
-        ⚠️ Расчёт предварительный. Точная смета фиксируется в договоре после замера и не меняется в процессе стройки.
+        ⚠️ Расчёт предварительный. Стоимость работ фиксируется в договоре после замера и не меняется в процессе строительства.
       </p>
     </div>
   );

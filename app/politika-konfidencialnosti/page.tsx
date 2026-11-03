@@ -1,10 +1,12 @@
-import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Политика конфиденциальности",
-  description:
-    "Политика обработки персональных данных ТОО «Эко Дом Билдинг» (бренд Standard Stroy): какие данные мы собираем, зачем и как защищаем.",
-  alternates: { canonical: "/politika-konfidencialnosti" },
+export const metadata = {
+  ...createPageMetadata({
+    path: "/politika-konfidencialnosti",
+    title: "Политика конфиденциальности",
+    description:
+      "Политика обработки персональных данных ТОО «Эко Дом Билдинг» (бренд Standard Stroy): какие данные мы собираем, зачем и как защищаем.",
+  }),
   robots: { index: true, follow: true },
 };
 

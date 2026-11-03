@@ -1,15 +1,15 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { formatCityPrice, getPricingData, resolveMaterialPrice } from "@/lib/pricing";
+import { createPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
+  path: "/materialy",
   title: "Материалы для строительства домов — FinnBlock, газоблок, кирпич",
   description:
     "Сравнение материалов для строительства дома в Алматы: FinnBlock, газоблок, кирпич. Теплоизоляция, сейсмостойкость, цена. Поможем выбрать под ваш бюджет.",
-  alternates: { canonical: "/materialy" },
-};
+});
 
 const materials = [
   {
