@@ -1,9 +1,11 @@
 import { testimonials } from "@/lib/content";
 import { createPageMetadata } from "@/lib/seo";
+import { TestimonialCard } from "@/app/components/testimonial-card";
+import { COMPANY_2GIS_URL } from "@/lib/contacts";
 
 export const metadata = createPageMetadata({
   path: "/otzyvy",
-  title: "Отзывы — Standard Stroy, строительство домов в Алматы",
+  title: "Отзывы о строительстве домов в Алматы",
   description:
     "Видеоотзывы и отзывы клиентов Standard Stroy о строительстве домов в Алматы, Каскелене, Талгаре. Реальные истории — без постановочных отзывов.",
 });
@@ -18,34 +20,10 @@ export default function OtzyvyPage() {
           Отзывы клиентов о сотрудничестве со Standard Stroy.
         </p>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-2">
+        <a href={COMPANY_2GIS_URL} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex min-h-11 items-center text-sm font-medium text-blue-700 underline underline-offset-4">Отзывы о компании в 2GIS</a>
+        <div className="mt-8 grid items-start gap-6 md:grid-cols-2">
           {testimonials.map((item) => (
-            <figure key={item.name} className="flex min-h-[19rem] flex-col rounded-[1.75rem] border border-slate-200 bg-white p-8 shadow-sm sm:p-9">
-              <span className="inline-flex w-fit items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-                {item.type}
-              </span>
-              {item.text ? (
-                <blockquote className="mt-6 flex-1">
-                  <p className="text-base leading-8 text-slate-700">«{item.text}»</p>
-                </blockquote>
-              ) : (
-                <div className="mt-6 flex-1" />
-              )}
-              <figcaption className="mt-6 border-t border-slate-100 pt-5">
-                <div className="font-medium text-slate-900">{item.name}</div>
-                <div className="mt-0.5 text-xs text-slate-500">{item.object}</div>
-                {item.date && <div className="mt-1 text-xs text-slate-500">{item.date}</div>}
-                <div className="mt-2 text-xs text-slate-500">Источник: {item.source}</div>
-                <a
-                  href={item.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-blue-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-900"
-                >
-                  {item.source === "Instagram" ? "Смотреть видеоотзыв" : "Смотреть отзыв в 2GIS"}
-                </a>
-              </figcaption>
-            </figure>
+            <TestimonialCard key={item.sourceUrl} item={item} />
           ))}
         </div>
 

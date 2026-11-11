@@ -1,5 +1,3 @@
-import { objects } from "@/lib/objects";
-
 /**
  * Контентные данные для главной страницы и Schema.org микроразметка.
  * FAQ — минимум 12 вопросов по ТЗ §2.3 (Блок 12).
@@ -97,6 +95,7 @@ export function organizationJsonLd() {
     name: "Standard Stroy",
     legalName: "ТОО «Эко Дом Билдинг»",
     url: "https://standardstroy.kz",
+    logo: "https://standardstroy.kz/standard-stroy-logo.png",
     telephone: "+77770500803",
     areaServed: ["Алматы", "Астана", "Каскелен", "Талгар"],
     address: {
@@ -166,9 +165,6 @@ export const materialsComparison = [
   { feature: "Утепление", finnblock: "Не требуется", gazoblock: "Минимальное", kirpich: "Обязательно" },
   { feature: "Фасад", finnblock: "Штукатурка/сайдинг", gazoblock: "Штукатурка/сайдинг", kirpich: "Облицовочный кирпич" },
 ];
-
-/** Построенные объекты (Блок 6) — единый источник данных для карточек и детальных страниц. */
-export const builtObjects = objects;
 
 export type Testimonial = {
   name: string;

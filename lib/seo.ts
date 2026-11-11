@@ -22,6 +22,10 @@ export function createPageMetadata({
   robots,
 }: PageMetadataInput): Metadata {
   const url = new URL(path, SITE_ORIGIN).toString();
+  const socialTitle =
+    path === "/" || title.endsWith(" | Standard Stroy")
+      ? title
+      : `${title} | Standard Stroy`;
 
   return {
     title,
@@ -32,13 +36,13 @@ export function createPageMetadata({
       locale: "ru_KZ",
       url,
       siteName: "Standard Stroy",
-      title,
+      title: socialTitle,
       description,
       images: [OG_IMAGE],
     },
     twitter: {
       card: "summary_large_image",
-      title,
+      title: socialTitle,
       description,
       images: [OG_IMAGE.url],
     },

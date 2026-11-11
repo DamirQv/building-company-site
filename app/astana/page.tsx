@@ -2,12 +2,13 @@ import Link from "next/link";
 import { LeadForm } from "../components/lead-form";
 import { formatCityPrice, getPricingData, resolveMaterialPrice } from "@/lib/pricing";
 import { createPageMetadata } from "@/lib/seo";
+import { ContactPhones } from "@/app/components/contact-phones";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = createPageMetadata({
   path: "/astana",
-  title: "Строительство домов в Астане — Standard Stroy",
+  title: "Строительство домов в Астане",
   description:
     "Строим дома в Астане под ключ из FinnBlock, газоблока и кирпича. Стоимость работ фиксируем в договоре, показываем стройку через онлайн-камеру, даём гарантию 10 лет. Бесплатный выезд инженера.",
 });
@@ -71,7 +72,7 @@ export default async function AstanaPage() {
                 и даст рекомендации по фундаменту. Без обязательств.
               </p>
               <div className="mt-4 space-y-2 text-sm text-zinc-700">
-                <p>📞 +7 (777) 050-08-03</p>
+                <ContactPhones astanaFirst />
                 <p>📍 Астана — выезжаем на объекты по городу и пригородам</p>
               </div>
             </div>

@@ -5,6 +5,8 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { trackCallbackClick, trackContact } from "@/lib/analytics-events";
+import { buildWhatsAppHref } from "@/lib/contacts";
+import { ContactPhones } from "./contact-phones";
 
 const navItems = [
   { href: "/o-kompanii", label: "О компании" },
@@ -28,7 +30,6 @@ const breadcrumbLabels: Record<string, string> = {
   "doma-iz-finnblock": "Дома из FinnBlock",
   "doma-iz-gazobloka": "Дома из газоблока",
   "doma-iz-kirpicha": "Дома из кирпича",
-  obekty: "Построенные объекты",
   otzyvy: "Отзывы",
   kontakty: "Контакты",
   astana: "Астана",
@@ -41,7 +42,7 @@ const breadcrumbLabels: Record<string, string> = {
   privacy: "Политика конфиденциальности",
 };
 
-const WHATSAPP_PHONE = "77770500803";
+const SITE_URL = "https://standardstroy.kz";
 // TODO: заменить на реальную ссылку на профиль Standard Stroy в Instagram,
 // когда она появится у владельца. Не придумываем URL.
 const INSTAGRAM_URL = "https://www.instagram.com/standard_stroy?stkn=MXhqaHpoamh4d2JxdQ==";
@@ -52,13 +53,6 @@ const COMPANY = {
   address: "г. Алматы, Казахстан",
   license: "№0011698",
 };
-
-export function buildWhatsAppHref(blockCode: string, customText?: string) {
-  const text =
-    customText ??
-    `Здравствуйте! Пишу с сайта standardstroy.kz [${blockCode}]`;
-  return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(text)}`;
-}
 
 /** Иконка WhatsApp — inline SVG, монохромная (в стиле остальных иконок). */
 function WhatsAppIcon() {
@@ -134,6 +128,17 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
 
   const segments = pathname.split("/").filter(Boolean);
   const isHome = pathname === "/";
+  const isDisabledObjectsRoute = segments[0] === "obekty" || segments[0] === "proekty";
+  const isNotFound = pathname === "/_not-found";
+  const breadcrumbItems = segments.map((segment, index) => {
+    const href = `/${segments.slice(0, index + 1).join("/")}`;
+    const label =
+      newsBreadcrumb?.slug === decodePathSegment(segment) && segments[0] === "blog" && index === segments.length - 1
+        ? newsBreadcrumb.title
+        : breadcrumbLabels[segment] ?? decodePathSegment(segment);
+
+    return { href, label };
+  });
 
   return (
     <>
@@ -151,7 +156,9 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
           <div className="hidden items-center gap-4 lg:flex">
-            <a href="tel:+77719444295" className="whitespace-nowrap text-sm font-semibold text-slate-900 transition hover:text-sky-700">+7 771 944 42 95</a>
+            <div className="shrink-0 font-semibold text-slate-900">
+              <ContactPhones compact />
+            </div>
             <Link href="/kontakty" onClick={() => trackCallbackClick("header")} className="inline-flex items-center justify-center bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-800">Заказать обратный звонок</Link>
           </div>
           <button type="button" onClick={() => setMenuOpen((open) => !open)} className="inline-flex h-10 w-10 items-center justify-center border border-slate-300 text-slate-800 lg:hidden" aria-label="Открыть меню" aria-expanded={menuOpen}>
@@ -166,36 +173,56 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
                   {item.label}
                 </Link>
               ))}
-              <a href="tel:+77719444295" className="pt-4 text-base font-semibold text-slate-950">+7 771 944 42 95</a>
+              <div className="pt-3 font-semibold text-slate-950"><ContactPhones /></div>
               <Link href="/kontakty" onClick={() => { trackCallbackClick("header"); setMenuOpen(false); }} className="mt-4 inline-flex items-center justify-center bg-sky-700 px-4 py-3 text-sm font-semibold text-white">Заказать обратный звонок</Link>
             </nav>
           </div>
         )}
       </header>
 
-      {!isHome && (
-        <div className="border-b border-zinc-200 bg-white/80">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 py-4 text-sm text-zinc-500 sm:px-8 lg:px-12">
-            <Link href="/" className="hover:text-zinc-900">
-              Главная
-            </Link>
-            {segments.map((segment, index) => {
-              const href = `/${segments.slice(0, index + 1).join("/")}`;
-              const label =
-                newsBreadcrumb?.slug === decodePathSegment(segment) && segments[0] === "blog" && index === segments.length - 1
-                  ? newsBreadcrumb.title
-                  : breadcrumbLabels[segment] ?? decodePathSegment(segment);
-              const isLast = index === segments.length - 1;
+      {!isHome && !isNotFound && !isDisabledObjectsRoute && (
+        <>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                itemListElement: [
+                  {
+                    "@type": "ListItem",
+                    position: 1,
+                    name: "Главная",
+                    item: `${SITE_URL}/`,
+                  },
+                  ...breadcrumbItems.map(({ href, label }, index) => ({
+                    "@type": "ListItem",
+                    position: index + 2,
+                    name: label,
+                    item: `${SITE_URL}${href}`,
+                  })),
+                ],
+              }),
+            }}
+          />
+          <div className="border-b border-zinc-200 bg-white/80">
+            <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 py-4 text-sm text-zinc-500 sm:px-8 lg:px-12">
+              <Link href="/" className="hover:text-zinc-900">
+                Главная
+              </Link>
+              {breadcrumbItems.map(({ href, label }, index) => {
+                const isLast = index === breadcrumbItems.length - 1;
 
-              return (
-                <div key={href} className="flex items-center gap-2">
-                  <span>/</span>
-                  {isLast ? <span className="text-zinc-700">{label}</span> : <Link href={href} className="hover:text-zinc-900">{label}</Link>}
-                </div>
-              );
-            })}
+                return (
+                  <div key={href} className="flex items-center gap-2">
+                    <span>/</span>
+                    {isLast ? <span className="text-zinc-700">{label}</span> : <Link href={href} className="hover:text-zinc-900">{label}</Link>}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {children}
@@ -219,7 +246,6 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
             <div className="mt-3 flex flex-col gap-2">
               <Link href="/o-kompanii" className="transition hover:text-slate-900">О компании</Link>
               <Link href="/uslugi" className="transition hover:text-slate-900">Услуги</Link>
-              <Link href="/obekty" className="transition hover:text-slate-900">Построенные объекты</Link>
               <Link href="/otzyvy" className="transition hover:text-slate-900">Отзывы</Link>
               <Link href="/blog" className="transition hover:text-slate-900">Статьи</Link>
             </div>
@@ -228,6 +254,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
             <p className="text-xs uppercase tracking-[0.25em] text-zinc-400">Контакты и документы</p>
             <div className="mt-3 flex flex-col gap-2">
               <Link href="/kontakty" className="transition hover:text-slate-900">Контакты</Link>
+              <ContactPhones />
               <div className="mt-1 flex items-center gap-2">
                 <a
                   href={buildWhatsAppHref("S-FOOTER")}

@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { companyBenefits } from "@/lib/content";
 import { createPageMetadata } from "@/lib/seo";
+import { ContactPhones } from "@/app/components/contact-phones";
 
 export const metadata = createPageMetadata({
   path: "/o-kompanii",
-  title: "О компании Standard Stroy — строительство домов в Алматы",
+  title: "О компании — строительство домов в Алматы",
   description:
     "Standard Stroy (ТОО «Эко Дом Билдинг») — 15 лет на рынке строительства, 320+ объектов. Стоимость работ фиксируем в договоре, онлайн-камера, гарантия 10 лет. Алматы, Астана.",
 });
@@ -47,7 +48,7 @@ export default function AboutPage() {
             </div>
             <div>
               <p className="text-zinc-400">Телефон</p>
-              <p className="mt-1 font-medium">+7 (777) 050-08-03</p>
+              <div className="mt-1 font-medium"><ContactPhones /></div>
             </div>
             <div>
               <p className="text-zinc-400">Сайт</p>

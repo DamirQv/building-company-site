@@ -19,15 +19,18 @@ export async function generateMetadata({
   const { slug } = await params;
   const result = await getPublishedNewsResult();
   if (!result.ok) {
-    return createPageMetadata({
-      path: `/blog/${slug}`,
+    return {
       title: "Публикации временно недоступны",
       description: "Публикации Standard Stroy временно недоступны.",
       robots: { index: false, follow: true },
-    });
+    };
   }
   const article = newsToBlogArticles(result.items).find((item) => item.slug === slug);
-  if (!article) return {};
+  if (!article) {
+    return {
+      robots: { index: false, follow: true },
+    };
+  }
 
   return createPageMetadata({
     path: `/blog/${article.slug}`,
@@ -125,11 +128,6 @@ function ArticleContent({ article, articles }: { article: BlogArticle; articles:
                   </li>
                 ))}
               </ol>
-              {article.objectLink && (
-                <Link href={article.objectLink} className="mt-6 inline-flex text-sm font-semibold text-sky-800 hover:text-sky-950">
-                  Связанный объект →
-                </Link>
-              )}
               {relatedArticles.length > 0 && (
                 <div className="mt-7 border-t border-slate-100 pt-5">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Читайте также</p>

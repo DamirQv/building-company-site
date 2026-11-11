@@ -5,7 +5,7 @@ import { createPageMetadata } from "@/lib/seo";
 
 export const metadata = createPageMetadata({
   path: "/blog",
-  title: "Новости и статьи — Standard Stroy",
+  title: "Новости и статьи о строительстве домов",
   description:
     "Новости и публикации Standard Stroy о строительстве домов и ходе работ.",
 });

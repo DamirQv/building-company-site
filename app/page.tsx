@@ -6,7 +6,6 @@ import { HeroContent } from "./components/hero-content";
 import { HeroBackground } from "./components/hero-background";
 import { TrustStrip } from "./components/trust-strip";
 import { ProcessTimeline } from "./components/process-timeline";
-import { CurrentProjectsSection } from "./components/current-projects-section";
 import { TestimonialsGrid } from "./components/testimonials-grid";
 import { MaterialsComparison } from "./components/materials-comparison";
 import { DocsBlock } from "./components/docs-block";
@@ -22,6 +21,7 @@ import {
 } from "@/lib/content";
 import { getPricingDataWithSource } from "@/lib/pricing";
 import { createPageMetadata } from "@/lib/seo";
+import { ContactPhones } from "./components/contact-phones";
 
 export const dynamic = "force-dynamic";
 
@@ -146,9 +146,6 @@ export default async function Home() {
       {/* Блок 5-9 — Как мы строим ваш дом (объединённый timeline процесса) */}
       <ProcessTimeline steps={processSteps} />
 
-      {/* Блок 6-12 — Текущие объекты */}
-      <CurrentProjectsSection />
-
       {/* Блок 7 — Отзывы */}
       <TestimonialsGrid items={testimonials} />
 
@@ -198,8 +195,8 @@ export default async function Home() {
                 Оставьте заявку — мы перезвоним, ответим на вопросы и при необходимости
                 запишем на бесплатный выезд инженера на участок.
               </p>
-              <div className="mt-6 space-y-2 text-sm text-zinc-700">
-                <p>📞 +7 (777) 050-08-03</p>
+              <div className="mt-6 max-w-sm space-y-2 text-sm text-zinc-700">
+                <ContactPhones />
                 <p>🕘 Пн–Сб, 9:00–20:00</p>
                 <p>📍 Алматы, Астана и пригороды</p>
               </div>
