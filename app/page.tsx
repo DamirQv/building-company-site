@@ -150,7 +150,7 @@ export default async function Home() {
       <TestimonialsGrid items={testimonials} />
 
       {/* Блок 8 — Материалы: сравнение */}
-      <MaterialsComparison rows={materialsComparison} pricing={pricing} />
+      <MaterialsComparison rows={materialsComparison} pricing={pricing} pricingSource={pricingSource} />
 
       {/* Блок 11 — Документы */}
       <DocsBlock items={documents} />

@@ -1,12 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { collectTracking } from "@/lib/utm";
 import { trackLead, trackQuizStart, trackContact } from "@/lib/analytics-events";
 import { formatCityPrice, resolveMaterialPrice } from "@/lib/pricing";
 import type { PricingEntry, PricingSource } from "@/lib/pricing";
+import { PricingNotice } from "./pricing-notice";
 
 /**
  * Калькулятор стоимости дома для Standard Stroy.
@@ -56,13 +57,19 @@ export default function LeadQuiz({
   const [error, setError] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [submitError, setSubmitError] = useState("");
+  const requestId = useRef<string | null>(null);
+  const submitting = useRef(false);
+  const [updatedQuote, setUpdatedQuote] = useState<{ context: string; price: number } | null>(null);
+  const quoteContext = `${city}|${material}|${area}`;
+  const hasUpdatedQuote = updatedQuote?.context === quoteContext;
+  const currentSource = hasUpdatedQuote ? "google-sheets" : pricingSource;
+  const pricePerM2 = hasUpdatedQuote ? updatedQuote.price : resolveMaterialPrice(material, pricing, city || "Алматы");
 
   const estimate = useMemo(() => {
     const areaValue = Number(area ?? 0);
-    const pricePerM2 = resolveMaterialPrice(material, pricing, city || "Алматы");
     const total = Math.round(areaValue * pricePerM2);
     return { min: total, max: total };
-  }, [area, material, pricing, city]);
+  }, [area, pricePerM2]);
 
   const next = () => {
     setError("");
@@ -101,12 +108,15 @@ export default function LeadQuiz({
   };
 
   const submitQuiz = async () => {
+    if (submitting.current) return;
+    submitting.current = true;
     setStatus("loading");
     setSubmitError("");
 
     const tracking = collectTracking();
 
     try {
+      requestId.current ??= crypto.randomUUID();
       const res = await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -120,7 +130,9 @@ export default function LeadQuiz({
           city,
           estimate_min: estimate.min,
           estimate_max: estimate.max,
-          price_per_m2: resolveMaterialPrice(material, pricing, city || "Алматы"),
+          price_per_m2: pricePerM2,
+          pricing_source: currentSource,
+          request_id: requestId.current,
           area_m2: Number(area),
           material,
           finish_level: finishLevel,
@@ -129,15 +141,27 @@ export default function LeadQuiz({
       });
 
       const data = await res.json();
+      if (res.status === 409 && data.code === "price_changed" &&
+          Number.isFinite(data.quote?.price_per_m2) && data.quote.price_per_m2 > 0) {
+        setUpdatedQuote({ context: quoteContext, price: data.quote.price_per_m2 });
+        setSubmitError("Цена обновилась. Проверьте новую сумму ниже и подтвердите её повторным нажатием. Заявка ещё не отправлена.");
+        setStatus("idle");
+        return;
+      }
       if (!res.ok || !data.ok) {
         throw new Error(data.error ?? "Не удалось отправить заявку");
       }
 
+      if (Number.isFinite(data.quote?.price_per_m2)) {
+        setUpdatedQuote({ context: quoteContext, price: data.quote.price_per_m2 });
+      }
       setStatus("success");
       trackLead("S-QUIZ", "quiz");
     } catch (err) {
       setStatus("error");
       setSubmitError(err instanceof Error ? err.message : "Ошибка отправки");
+    } finally {
+      submitting.current = false;
     }
   };
 
@@ -158,12 +182,12 @@ export default function LeadQuiz({
             Если не ответим в течение 30 минут — проверьте спам.
           </p>
           <div className="mt-6 inline-flex rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-900">
-            {formatCityPrice(resolveMaterialPrice(material, pricing, city || "Алматы"), city || "Алматы")} · {city} · Ориентировочно: {formatKzt(estimate.min)} ₸
+            {formatCityPrice(pricePerM2, city || "Алматы")} · {city} · Ориентировочно: {formatKzt(estimate.min)} ₸
           </div>
           <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
               href={`https://wa.me/77770500803?text=${encodeURIComponent(
-                "Здравствуйте! Хочу получить точный расчёт стоимости дома.\nГород: " + (city || "—") + "\nМатериал: " + (material || "—") + "\nЦена за м²: " + formatCityPrice(resolveMaterialPrice(material, pricing, city || "Алматы"), city || "Алматы") + "\nПлощадь: " + (area || "—") + " м²\nОтделка: " + (finishLevel || "—") + "\nОриентировочная стоимость: " + formatKzt(estimate.min) + " ₸\nСайт Standard Stroy [S-QUIZ]"
+                "Здравствуйте! Хочу получить точный расчёт стоимости дома.\nГород: " + (city || "—") + "\nМатериал: " + (material || "—") + "\nЦена за м²: " + formatCityPrice(pricePerM2, city || "Алматы") + "\nПлощадь: " + (area || "—") + " м²\nОтделка: " + (finishLevel || "—") + "\nОриентировочная стоимость: " + formatKzt(estimate.min) + " ₸\nСайт Standard Stroy [S-QUIZ]"
               )}`}
               target="_blank"
               rel="noreferrer"
@@ -180,14 +204,7 @@ export default function LeadQuiz({
 
   return (
     <div className="rounded-[2rem] border border-slate-200 bg-white p-6 lg:p-8 shadow-sm">
-      {pricingSource === "default" && (
-        <p
-          role="status"
-          className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
-        >
-          Внимание: временно используются резервные цены. Итоговую стоимость уточняйте у менеджера.
-        </p>
-      )}
+      <PricingNotice source={currentSource} />
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm uppercase tracking-[0.35em] text-blue-700">Калькулятор стоимости</p>
@@ -315,7 +332,7 @@ export default function LeadQuiz({
                 {formatKzt(estimate.min)} ₸
               </div>
               <div className="mt-2 inline-flex rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-900">
-                {formatCityPrice(resolveMaterialPrice(material, pricing, city || "Алматы"), city || "Алматы")} · {city} · {area} м² · {finishLevel}
+                {formatCityPrice(pricePerM2, city || "Алматы")} · {city} · {area} м² · {finishLevel}
               </div>
             </div>
             <p className="mt-4 text-sm leading-7 text-slate-600">
@@ -347,6 +364,11 @@ export default function LeadQuiz({
           <div>
             <div className="text-lg font-medium text-slate-900">Получить точный расчёт</div>
             <p className="mt-1 text-sm text-slate-500">Оставьте контакты — подготовим расчёт стоимости с учётом вашего участка</p>
+            {hasUpdatedQuote && (
+              <p role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                Актуальная цена: {formatCityPrice(pricePerM2, city || "Алматы")}. Новая сумма: {formatKzt(estimate.min)} ₸.
+              </p>
+            )}
             <div className="mt-4 space-y-3">
               <input
                 value={name}
@@ -380,7 +402,7 @@ export default function LeadQuiz({
               </label>
             </div>
             {error && <p className="mt-3 text-sm text-rose-300">{error}</p>}
-            {submitError && <p className="mt-3 text-sm text-rose-300">{submitError}</p>}
+            {submitError && <p role="alert" className="mt-3 text-sm text-rose-700">{submitError}</p>}
             <div className="mt-6 flex flex-wrap gap-3">
               <button
                 type="button"
@@ -403,7 +425,7 @@ export default function LeadQuiz({
                 disabled={status === "loading"}
                 className="rounded-full bg-blue-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-blue-800 disabled:opacity-60"
               >
-                {status === "loading" ? "Отправляем…" : "Получить расчёт"}
+                {status === "loading" ? "Отправляем…" : hasUpdatedQuote ? "Подтвердить новую сумму и отправить" : "Получить расчёт"}
               </button>
               <button
                 type="button"

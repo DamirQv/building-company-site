@@ -5,6 +5,7 @@ import { materialsData, getMaterialBySlug } from "@/lib/materials";
 import { formatCityPrice, getPricingData, resolveMaterialPrice } from "@/lib/pricing";
 import { LeadForm } from "../../components/lead-form";
 import { createPageMetadata } from "@/lib/seo";
+import { PricingNotice } from "@/app/components/pricing-notice";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export default async function MaterialPage({
     notFound();
   }
 
-  const pricing = await getPricingData();
+  const { pricing, source: pricingSource } = await getPricingData();
   const pricingMaterial = materialBySlug[material.slug];
 
   return (
@@ -57,6 +58,7 @@ export default async function MaterialPage({
         <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-600">{material.description}</p>
 
         <div className="mt-8 rounded-2xl border border-zinc-200 bg-white px-6 py-4 shadow-sm">
+          <PricingNotice source={pricingSource} />
           <p className="text-sm font-semibold text-zinc-900">
             Алматы: {formatCityPrice(resolveMaterialPrice(pricingMaterial, pricing), "Алматы")}
           </p>

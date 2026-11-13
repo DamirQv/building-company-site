@@ -12,6 +12,7 @@ export type PricingSource = "google-sheets" | "default";
 export type PricingData = {
   pricing: PricingEntry[];
   source: PricingSource;
+  error?: PricingFailureCode;
 };
 
 /**
@@ -60,24 +61,22 @@ function decodeEntities(value: string): string {
 }
 
 function normalizeGoogleSheetsUrl(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return "";
-
-  if (/docs\.google\.com\/spreadsheets\/d\/e\/[^/]+\/pub(?:\?|$)/i.test(trimmed)) {
-    return trimmed;
-  }
-
-  if (/docs\.google\.com\/spreadsheets\//i.test(trimmed)) {
-    const match = trimmed.match(/\/spreadsheets\/d\/([^/]+)/i);
-    if (match) {
-      const sheetId = match[1];
-      const gidMatch = trimmed.match(/[?&]gid=(\d+)/i);
-      const gid = gidMatch ? `&gid=${gidMatch[1]}` : "";
-      return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv${gid}`;
+  if (!raw.trim()) return "";
+  const url = new URL(raw.trim());
+  if (url.hostname === "docs.google.com" && url.pathname.startsWith("/spreadsheets/")) {
+    const gid = url.searchParams.get("gid") ?? new URLSearchParams(url.hash.slice(1)).get("gid");
+    if (/^\/spreadsheets\/d\/e\//.test(url.pathname)) {
+      url.searchParams.set("output", "csv");
+    } else {
+      const id = url.pathname.match(/\/spreadsheets\/d\/([^/]+)/)?.[1];
+      if (!id) throw new PricingError("invalid_format");
+      url.pathname = `/spreadsheets/d/${id}/export`;
+      url.search = "?format=csv";
     }
+    if (gid) url.searchParams.set("gid", gid);
+    url.hash = "";
   }
-
-  return trimmed;
+  return url.toString();
 }
 
 /** OneDrive/Excel Online публичная ссылка → прямая загрузка XLSX. */
@@ -98,6 +97,14 @@ const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
+export type PricingFailureCode = "not_configured" | "timeout" | "network" | "http" | "invalid_format" | "incomplete" | "duplicate" | "invalid_rate";
+
+class PricingError extends Error {
+  constructor(readonly code: PricingFailureCode, readonly status?: number) {
+    super(code);
+  }
+}
+
 async function fetchBinary(url: string): Promise<Uint8Array> {
   const res = await fetch(url, {
     cache: "no-store",
@@ -108,7 +115,7 @@ async function fetchBinary(url: string): Promise<Uint8Array> {
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,*/*;q=0.8",
     },
   });
-  if (!res.ok) throw new Error(`Pricing fetch failed: ${res.status}`);
+  if (!res.ok) throw new PricingError("http", res.status);
   const buffer = await res.arrayBuffer();
   return new Uint8Array(buffer);
 }
@@ -140,12 +147,12 @@ function parsePricingXlsx(data: Uint8Array): ParsedPricingData {
     /xl\/sharedStrings\.xml$/i.test(name),
   );
 
-  if (!sheetName) return { entries: [], usesDefaultPricing: false };
+  if (!sheetName) throw new PricingError("invalid_format");
 
+  const textNodes = (xml: string) => [...xml.matchAll(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)]
+    .map((m) => decodeEntities(m[1])).join("");
   const sharedStrings = stringsName
-    ? [...decodeUtf8(files[stringsName]).matchAll(/<t(?:\s[^>]*)?>([^<]*)<\/t>/g)].map(
-        (m) => decodeEntities(m[1]),
-      )
+    ? [...decodeUtf8(files[stringsName]).matchAll(/<si(?:\s[^>]*)?>([\s\S]*?)<\/si>/g)].map((m) => textNodes(m[1]))
     : [];
 
   const sheetXml = decodeUtf8(files[sheetName]);
@@ -163,7 +170,7 @@ function parsePricingXlsx(data: Uint8Array): ParsedPricingData {
     const typeMatch = /t="([^"]+)"/.exec(attrs);
     const type = typeMatch ? typeMatch[1] : "";
     const vMatch = /<v>([^<]*)<\/v>/.exec(inner);
-    const raw = vMatch ? vMatch[1] : "";
+    const raw = type === "inlineStr" ? textNodes(inner) : vMatch ? vMatch[1] : "";
 
     if (!rowNum || !raw) continue;
 
@@ -181,50 +188,17 @@ function parsePricingXlsx(data: Uint8Array): ParsedPricingData {
 
   const sortedRows = Array.from(rows.keys()).sort((a, b) => a - b);
   const headerRow = rows.get(1);
-  if (!headerRow) return { entries: [], usesDefaultPricing: false };
-
-  const columnLetters = Array.from(new Set(sortedRows.flatMap((row) => [...(rows.get(row)?.keys() ?? [])])));
-  const headers = columnLetters.map((column) => String(headerRow.get(column) ?? ""));
-  const indexes = getPricingHeaderIndexes(headers);
-  if (!indexes) return { entries: [], usesDefaultPricing: false };
-
-  let usesDefaultPricing = false;
-  const entries = sortedRows.slice(1).reduce<PricingEntry[]>((entries, rowNum) => {
-    const row = rows.get(rowNum);
-    const material = String(row?.get(columnLetters[indexes.material]) ?? "").trim();
-    const almatyPrice = parseNumber(String(row?.get(columnLetters[indexes.almaty]) ?? ""));
-    if (!material || almatyPrice === null || almatyPrice <= 0) return entries;
-
-    const astanaPrice = indexes.astana === -1
-      ? null
-      : parseNumber(String(row?.get(columnLetters[indexes.astana]) ?? ""));
-    const resolvedAstanaPrice = astanaPrice && astanaPrice > 0
-      ? astanaPrice
-      : getDefaultAstanaPrice(material);
-    if (!astanaPrice || astanaPrice <= 0) usesDefaultPricing = resolvedAstanaPrice > 0 || usesDefaultPricing;
-    if (resolvedAstanaPrice <= 0) return entries;
-
-    entries.push({
-      material,
-      pricePerM2: almatyPrice,
-      astanaPricePerM2: resolvedAstanaPrice,
-      currency: "KZT",
-    });
-    return entries;
-  }, []);
-
-  return { entries, usesDefaultPricing };
+  if (!headerRow) throw new PricingError("invalid_format");
+  const columns = [...headerRow.keys()];
+  return parsePricingRows(columns.map((col) => String(headerRow.get(col) ?? "")),
+    sortedRows.filter((row) => row > 1).map((row) => columns.map((col) => String(rows.get(row)?.get(col) ?? ""))));
 }
 
 function parseNumber(raw: string): number | null {
-  const cleaned = raw
-    .replace(/\s/g, "")
-    .replace(/[^0-9,.-]/g, "")
-    .replace(/,/g, ".");
-
-  if (!cleaned) return null;
+  const cleaned = raw.trim().replace(/\s/g, "").replace(/(?:KZT|₸)$/i, "").replace(",", ".");
+  if (!/^\+?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(cleaned)) return null;
   const value = Number(cleaned);
-  return Number.isFinite(value) ? value : null;
+  return Number.isFinite(value) && value > 0 && Number.isSafeInteger(Math.round(value * 1000)) ? value : null;
 }
 
 type PricingHeaderIndexes = {
@@ -235,38 +209,60 @@ type PricingHeaderIndexes = {
 
 type ParsedPricingData = {
   entries: PricingEntry[];
-  usesDefaultPricing: boolean;
 };
 
 function getPricingHeaderIndexes(headers: string[]): PricingHeaderIndexes | null {
   const normalized = headers.map(normalizeText);
-  const material = normalized.findIndex((header) =>
+  const uniqueIndex = (matches: (header: string) => boolean) => {
+    const indexes = normalized.flatMap((header, index) => matches(header) ? [index] : []);
+    if (indexes.length > 1) throw new PricingError("duplicate");
+    return indexes[0] ?? -1;
+  };
+  const material = uniqueIndex((header) =>
     ["material", "maaterial", "name", "title", "type", "variant", "материал", "название", "вид"].includes(header) ||
     header.includes("material") ||
     header.includes("материал")
   );
-  const almaty = normalized.findIndex((header) =>
-    ["almatypriceperm2", "priceperm2almaty", "priceperm2", "pricepermeter", "price", "costperm2", "cost", "value", "цена", "ценазаm2", "ценазаm²", "стоимость"].includes(header)
+  const almaty = uniqueIndex((header) =>
+    ["алматы", "almaty", "ценазаm2", "ценазам2", "ценазам", "almatypriceperm2", "priceperm2almaty", "priceperm2", "pricepermeter", "price", "costperm2", "cost", "value", "цена", "ценазаm2", "ценазаm²", "стоимость"].includes(header)
   );
-  const astana = normalized.findIndex((header) =>
-    ["astanapriceperm2", "priceperm2astana"].includes(header)
+  const astana = uniqueIndex((header) =>
+    ["астана", "astana", "astanapriceperm2", "priceperm2astana"].includes(header)
   );
 
-  return material === -1 || almaty === -1
+  if (new Set(normalized).size !== normalized.length) throw new PricingError("duplicate");
+  return material === -1 || almaty === -1 || astana === -1
     ? null
     : { material, almaty, astana };
 }
 
-function getDefaultAstanaPrice(material: string): number {
-  const lookup = canonicalMaterialKey(material);
-  return DEFAULT_PRICING.find((entry) => canonicalMaterialKey(entry.material) === lookup)?.astanaPricePerM2
-    ?? 0;
+function parsePricingRows(headers: string[], rows: string[][]): ParsedPricingData {
+  const indexes = getPricingHeaderIndexes(headers);
+  if (!indexes) throw new PricingError("incomplete");
+  const found = new Map<string, PricingEntry>();
+  for (const row of rows) {
+    if (row.every((cell) => !cell.trim())) continue;
+    if (row.length !== headers.length) throw new PricingError("invalid_format");
+    const material = row[indexes.material]?.trim() ?? "";
+    const key = canonicalMaterialKey(material);
+    const expected = DEFAULT_PRICING.find((entry) => canonicalMaterialKey(entry.material) === key);
+    if (!expected) throw new PricingError("invalid_rate");
+    if (found.has(key)) throw new PricingError("duplicate");
+    const almaty = parseNumber(row[indexes.almaty] ?? "");
+    const astana = parseNumber(row[indexes.astana] ?? "");
+    if (!(row[indexes.almaty]?.trim()) || !(row[indexes.astana]?.trim())) throw new PricingError("incomplete");
+    if (almaty === null || astana === null) throw new PricingError("invalid_rate");
+    found.set(key, { material: expected.material, pricePerM2: almaty, astanaPricePerM2: astana, currency: "KZT" });
+  }
+  if (found.size !== DEFAULT_PRICING.length) throw new PricingError("incomplete");
+  return { entries: DEFAULT_PRICING.map((entry) => found.get(canonicalMaterialKey(entry.material))!) };
 }
 
 function parseCsvLine(line: string): string[] {
   const result: string[] = [];
   let current = "";
   let inQuotes = false;
+  let closedQuote = false;
 
   for (let i = 0; i < line.length; i += 1) {
     const char = line[i];
@@ -274,115 +270,71 @@ function parseCsvLine(line: string): string[] {
       if (inQuotes && line[i + 1] === '"') {
         current += '"';
         i += 1;
+      } else if (inQuotes) {
+        inQuotes = false;
+        closedQuote = true;
       } else {
-        inQuotes = !inQuotes;
+        if (current.trim() || closedQuote) throw new PricingError("invalid_format");
+        inQuotes = true;
       }
     } else if (char === "," && !inQuotes) {
       result.push(current.trim());
       current = "";
+      closedQuote = false;
     } else {
+      if (closedQuote && char.trim()) throw new PricingError("invalid_format");
       current += char;
     }
   }
 
+  if (inQuotes) throw new PricingError("invalid_format");
   result.push(current.trim());
   return result;
 }
 
 function parsePricingCsv(csv: string): ParsedPricingData {
-  const sanitized = csv.replace(/^\uFEFF/, "");
-  const rows = sanitized
-    .split(/\r?\n/)
-    .map((row) => row.trim())
-    .filter(Boolean)
-    .map(parseCsvLine);
-
-  if (rows.length === 0) return { entries: [], usesDefaultPricing: false };
-
-  const indexes = getPricingHeaderIndexes(rows[0]);
-  if (!indexes) return { entries: [], usesDefaultPricing: false };
-
-  let usesDefaultPricing = false;
-  const entries = rows.slice(1).reduce<PricingEntry[]>((acc, row) => {
-    const material = row[indexes.material]?.trim();
-    const price = parseNumber(row[indexes.almaty] ?? "");
-    const astanaPrice = indexes.astana === -1
-      ? null
-      : parseNumber(row[indexes.astana] ?? "");
-
-    if (!material || price === null || price <= 0) return acc;
-    const resolvedAstanaPrice = astanaPrice && astanaPrice > 0
-      ? astanaPrice
-      : getDefaultAstanaPrice(material);
-    if (!astanaPrice || astanaPrice <= 0) usesDefaultPricing = resolvedAstanaPrice > 0 || usesDefaultPricing;
-    if (resolvedAstanaPrice <= 0) return acc;
-
-    acc.push({
-      material,
-      pricePerM2: price,
-      astanaPricePerM2: resolvedAstanaPrice,
-      currency: "KZT",
-    });
-    return acc;
-  }, []);
-
-  return { entries, usesDefaultPricing };
-}
-
-function usesPricingFallback(parsed: ParsedPricingData): boolean {
-  if (parsed.usesDefaultPricing) return true;
-  const parsedMaterials = new Set(parsed.entries.map((entry) => canonicalMaterialKey(entry.material)));
-  return DEFAULT_PRICING.some((entry) => !parsedMaterials.has(canonicalMaterialKey(entry.material)));
+  const sanitized = csv.replace(/^\uFEFF/, "").trim();
+  if (!sanitized) throw new PricingError("incomplete");
+  if (sanitized.startsWith("<") || !sanitized.includes(",")) throw new PricingError("invalid_format");
+  const rows = sanitized.split(/\r?\n/).map((row) => row.trim()).filter(Boolean).map(parseCsvLine);
+  return parsePricingRows(rows[0], rows.slice(1));
 }
 
 export async function getPricingDataWithSource(): Promise<PricingData> {
-  const sourceUrl =
-    normalizeGoogleSheetsUrl(process.env.GOOGLE_SHEETS_CSV_URL?.trim() || "") ||
-    normalizeGoogleSheetsUrl(process.env.PRICING_SHEET_URL?.trim() || "");
-
-  if (!sourceUrl) {
-    console.warn("[pricing] Pricing source URL is not configured, using approved fallback prices");
-    return { pricing: DEFAULT_PRICING, source: "default" };
-  }
-
-  const downloadUrl = toExcelDownloadUrl(sourceUrl);
-
   try {
-    const raw = await fetchBinary(downloadUrl);
-
-    // XLSX (ZIP) — распаковка и парсинг
+    const configured = process.env.GOOGLE_SHEETS_CSV_URL?.trim() || process.env.PRICING_SHEET_URL?.trim();
+    if (!configured) throw new PricingError("not_configured");
+    let sourceUrl: string;
+    try { sourceUrl = toExcelDownloadUrl(normalizeGoogleSheetsUrl(configured)); }
+    catch { throw new PricingError("invalid_format"); }
+    const raw = await fetchBinary(sourceUrl);
+    let parsed: ParsedPricingData;
     if (isPkgZip(raw)) {
-      const parsedXlsx = parsePricingXlsx(raw);
-      if (parsedXlsx.entries.length > 0) {
-        return {
-          pricing: parsedXlsx.entries,
-          source: usesPricingFallback(parsedXlsx) ? "default" : "google-sheets",
-        };
+      try { parsed = parsePricingXlsx(raw); }
+      catch (error) {
+        if (error instanceof PricingError) throw error;
+        throw new PricingError("invalid_format");
       }
-      console.warn("[pricing] XLSX распознан, но пуст/не разобран, fallback CSV");
-      return { pricing: DEFAULT_PRICING, source: "default" };
+    } else {
+      parsed = parsePricingCsv(decodeUtf8(raw));
     }
-
-    // CSV / текст — старая логика
-    const csv = decodeUtf8(raw);
-    const parsed = parsePricingCsv(csv);
-    if (parsed.entries.length > 0) {
-      return {
-        pricing: parsed.entries,
-        source: usesPricingFallback(parsed) ? "default" : "google-sheets",
-      };
-    }
-    console.warn("[pricing] CSV has no valid pricing rows, using approved fallback prices");
-    return { pricing: DEFAULT_PRICING, source: "default" };
+    return { pricing: parsed.entries, source: "google-sheets" };
   } catch (error) {
-    console.warn("[pricing] Не удалось загрузить цены из внешнего источника, используется fallback:", error);
-    return { pricing: DEFAULT_PRICING, source: "default" };
+    const details = (error ?? {}) as { name?: string; code?: string; cause?: { code?: string } };
+    const code: PricingFailureCode = error instanceof PricingError ? error.code
+      : details.name === "TimeoutError" || details.name === "AbortError" ||
+        ["ETIMEDOUT", "UND_ERR_CONNECT_TIMEOUT", "UND_ERR_HEADERS_TIMEOUT", "UND_ERR_BODY_TIMEOUT"].includes(details.cause?.code ?? details.code ?? "")
+        ? "timeout" : "network";
+    console.warn("[pricing] External pricing rejected; reserve rates are display-only", {
+      code, ...(error instanceof PricingError && error.status ? { status: error.status } : {}),
+    });
+    return { pricing: DEFAULT_PRICING, source: "default", error: code };
   }
 }
 
-export async function getPricingData(): Promise<PricingEntry[]> {
-  const { pricing } = await getPricingDataWithSource();
-  return pricing;
+/** Keep the source/status intact at every consumer. */
+export async function getPricingData(): Promise<PricingData> {
+  return getPricingDataWithSource();
 }
 
 export function formatPrice(value: number): string {
@@ -395,23 +347,8 @@ export function resolveMaterialPrice(
   city: "Алматы" | "Астана" = "Алматы",
 ): number {
   const lookup = canonicalMaterialKey(material ?? "");
-  if (!lookup) {
-    return city === "Астана"
-      ? DEFAULT_PRICING[0].astanaPricePerM2
-      : DEFAULT_PRICING[0].pricePerM2;
-  }
-
-  const match = pricing.find((entry) => canonicalMaterialKey(entry.material) === lookup);
-  if (match) {
-    return city === "Астана" ? match.astanaPricePerM2 : match.pricePerM2;
-  }
-
-  const fallback = DEFAULT_PRICING.find((entry) => canonicalMaterialKey(entry.material) === lookup)
-    ?? DEFAULT_PRICING[0];
-  if (city === "Астана") {
-    return fallback.astanaPricePerM2;
-  }
-  return fallback.pricePerM2;
+  const match = lookup ? pricing.find((entry) => canonicalMaterialKey(entry.material) === lookup) : pricing[0];
+  return match ? city === "Астана" ? match.astanaPricePerM2 : match.pricePerM2 : Number.NaN;
 }
 
 export function formatCityPrice(value: number, city: "Алматы" | "Астана"): string {

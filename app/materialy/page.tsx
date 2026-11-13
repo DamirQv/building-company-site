@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatCityPrice, getPricingData, resolveMaterialPrice } from "@/lib/pricing";
 import { createPageMetadata } from "@/lib/seo";
+import { PricingNotice } from "@/app/components/pricing-notice";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ const materials = [
 ];
 
 export default async function MaterialyPage() {
-  const pricing = await getPricingData();
+  const { pricing, source: pricingSource } = await getPricingData();
 
   return (
     <main className="min-h-screen bg-blue-50 px-6 py-24 text-slate-900 sm:px-8 lg:px-12">
@@ -48,6 +49,7 @@ export default async function MaterialyPage() {
           Поможем подобрать оптимальный вариант под ваш бюджет и климат.
         </p>
 
+        <div className="mt-6"><PricingNotice source={pricingSource} /></div>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {materials.map((mat) => (
             <Link

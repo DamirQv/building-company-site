@@ -3,6 +3,7 @@ import { LeadForm } from "../components/lead-form";
 import { formatCityPrice, getPricingData, resolveMaterialPrice } from "@/lib/pricing";
 import { createPageMetadata } from "@/lib/seo";
 import { ContactPhones } from "@/app/components/contact-phones";
+import { PricingNotice } from "@/app/components/pricing-notice";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export const metadata = createPageMetadata({
 });
 
 export default async function AstanaPage() {
-  const pricing = await getPricingData();
+  const { pricing, source: pricingSource } = await getPricingData();
 
   return (
     <main className="min-h-screen bg-blue-50 px-6 py-24 text-slate-900 sm:px-8 lg:px-12">
@@ -36,6 +37,7 @@ export default async function AstanaPage() {
           </div>
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900">Цены</h2>
+            <PricingNotice source={pricingSource} />
             <p className="mt-3 text-sm leading-7 text-slate-600">
               Ориентировочная цена за м² по материалу:
             </p>

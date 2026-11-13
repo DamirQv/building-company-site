@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { CallbackButton } from "./callback-button";
-import type { PricingEntry } from "@/lib/pricing";
+import type { PricingEntry, PricingSource } from "@/lib/pricing";
+import { PricingNotice } from "./pricing-notice";
 import { formatCityPrice, resolveMaterialPrice } from "@/lib/pricing";
 
 type ComparisonRow = {
@@ -30,7 +31,7 @@ const columns = [
  * Desktop: таблица. Mobile: адаптивный стек карточек без горизонтального скролла.
  * Стиль согласован с остальными блоками: светлая основа, тонкие линии, синий акцент.
  */
-export function MaterialsComparison({ rows, pricing }: { rows: ComparisonRow[]; pricing: PricingEntry[] }) {
+export function MaterialsComparison({ rows, pricing, pricingSource }: { rows: ComparisonRow[]; pricing: PricingEntry[]; pricingSource: PricingSource }) {
   const comparisonRows: ComparisonRow[] = [
     ...rows,
     {
@@ -59,6 +60,7 @@ export function MaterialsComparison({ rows, pricing }: { rows: ComparisonRow[]; 
         </div>
 
         {/* Desktop: таблица */}
+        <PricingNotice source={pricingSource} />
         <motion.div
           variants={{ hidden: { opacity: 0, y: 18 }, visible: { opacity: 1, y: 0 } }}
           transition={{ duration: 0.45 }}

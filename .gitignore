@@ -43,3 +43,6 @@ next-env.d.ts
 # Local tools and CRM diagnostics
 .mcp.json
 bitrix-fields.json
+
+# Durable local request receipts (hashes/results only; never commit runtime state).
+/.data/lead-requests/

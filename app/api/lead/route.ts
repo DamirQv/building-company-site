@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
-import { getPricingData, resolveMaterialPrice } from "@/lib/pricing";
+import { getPricingDataWithSource, resolveMaterialPrice } from "@/lib/pricing";
+import { claimLead, completeLead, leadFingerprint, savedLead } from "@/lib/lead-idempotency";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,8 @@ type LeadPayload = {
   estimate_min?: number;
   estimate_max?: number;
   price_per_m2?: number;
+  pricing_source?: string;
+  request_id?: string;
   city?: string;
   object_type?: string;
   has_land?: string;
@@ -184,6 +187,8 @@ export async function POST(request: Request) {
   ].some((value) => value !== undefined && value !== null && value !== "");
   const isQuiz = body.formType === "quiz" || body.quiz_completed === true || hasQuizPricingData;
   let effectiveBody = body;
+  let submissionKey: string | undefined;
+  let fingerprint = "";
 
   if (isQuiz) {
     if (body.city !== "Алматы" && body.city !== "Астана") {
@@ -207,14 +212,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "Комплектация должна быть «Коробка дома»" }, { status: 400 });
     }
 
-    const pricing = await getPricingData();
-    const pricePerM2 = resolveMaterialPrice(material, pricing, body.city);
+    if (typeof body.request_id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.request_id)) {
+      return NextResponse.json({ ok: false, code: "request_id_required", error: "Обновите страницу и повторите отправку" }, { status: 400 });
+    }
+    submissionKey = body.request_id;
+    fingerprint = leadFingerprint([name, phone, body.city, material, areaM2, QUIZ_FINISH_LEVEL]);
+    try {
+      const saved = await savedLead(submissionKey, fingerprint);
+      if (saved) return NextResponse.json(saved.body, { status: saved.status });
+    } catch {
+      console.error("[lead] Idempotency storage unavailable");
+      return NextResponse.json({ ok: false, error: "Отправка временно недоступна. Попробуйте позже." }, { status: 503 });
+    }
+    const pricingData = await getPricingDataWithSource();
+    if (pricingData.source !== "google-sheets") {
+      return NextResponse.json({ ok: false, code: "pricing_unavailable", error: "Актуальные цены временно недоступны. Заявка не отправлена. Повторите позже или свяжитесь с менеджером." }, { status: 503 });
+    }
+    const pricePerM2 = resolveMaterialPrice(material, pricingData.pricing, body.city);
     if (!Number.isFinite(pricePerM2) || pricePerM2 <= 0) {
       console.error("[lead] No valid price available for the selected quiz options");
       return NextResponse.json({ ok: false, error: "Не удалось рассчитать стоимость. Попробуйте позже" }, { status: 503 });
     }
 
     const estimate = Math.round(areaM2 * pricePerM2);
+    if (body.pricing_source !== "google-sheets" || body.price_per_m2 !== pricePerM2 ||
+        body.estimate_min !== estimate || body.estimate_max !== estimate) {
+      return NextResponse.json({
+        ok: false, code: "price_changed",
+        error: "Актуальная цена отличается от показанной. Подтвердите новую сумму перед отправкой.",
+        quote: { price_per_m2: pricePerM2, estimate_min: estimate, estimate_max: estimate, pricing_source: "google-sheets" },
+      }, { status: 409 });
+    }
     effectiveBody = {
       ...body,
       city: body.city,
@@ -222,6 +250,7 @@ export async function POST(request: Request) {
       area_m2: areaM2,
       finish_level: QUIZ_FINISH_LEVEL,
       price_per_m2: pricePerM2,
+      pricing_source: "google-sheets",
       estimate_min: estimate,
       estimate_max: estimate,
     };
@@ -231,6 +260,28 @@ export async function POST(request: Request) {
   if (!webhookUrl) {
     return NextResponse.json({ ok: false, error: "BITRIX24 webhook is not configured" }, { status: 500 });
   }
+
+  if (submissionKey) {
+    try {
+      if (!(await claimLead(submissionKey, fingerprint))) {
+        const saved = await savedLead(submissionKey, fingerprint);
+        return NextResponse.json(saved?.body ?? { ok: false, code: "submission_pending", error: "Заявка уже обрабатывается." }, { status: saved?.status ?? 409 });
+      }
+    } catch {
+      console.error("[lead] Cannot reserve submission");
+      return NextResponse.json({ ok: false, error: "Отправка временно недоступна." }, { status: 503 });
+    }
+  }
+  const finish = async (result: Record<string, unknown>, status = 200) => {
+    if (submissionKey) {
+      try { await completeLead(submissionKey, fingerprint, status, result); }
+      catch {
+        console.error("[lead] Receipt persistence failed; submission remains locked");
+        return NextResponse.json({ ok: false, code: "submission_pending", error: "Статус отправки уточняется. Не создавайте повторную заявку; свяжитесь с менеджером." }, { status: 503 });
+      }
+    }
+    return NextResponse.json(result, { status });
+  };
 
   const webhookBaseUrl = webhookUrl.replace(/\/+$/, "");
   const contactEndpoint = `${webhookBaseUrl}/crm.contact.add.json`;
@@ -307,10 +358,10 @@ export async function POST(request: Request) {
         error: contactData.error,
         error_description: contactData.error_description,
       });
-      return NextResponse.json({ ok: false, error: "Bitrix24 contact request failed" }, { status: 500 });
+      return finish({ ok: false, code: "submission_failed", error: "Не удалось подтвердить отправку. Не повторяйте заявку; свяжитесь с менеджером." }, 502);
     }
   } catch {
-    return NextResponse.json({ ok: false, error: "Bitrix24 contact request failed" }, { status: 500 });
+    return finish({ ok: false, code: "submission_failed", error: "Не удалось подтвердить отправку. Не повторяйте заявку; свяжитесь с менеджером." }, 502);
   }
 
   dealFields.contactId = contactData.result;
@@ -328,7 +379,7 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
-      return NextResponse.json({ ok: false, error: "Bitrix24 request failed" }, { status: 500 });
+      return finish({ ok: false, code: "submission_failed", error: "Не удалось подтвердить отправку. Не повторяйте заявку; свяжитесь с менеджером." }, 502);
     }
 
     const data = await response.json();
@@ -338,12 +389,15 @@ export async function POST(request: Request) {
     console.log("[Bitrix24] result:", data?.result);
     console.log("[Bitrix24] full_data:", data);
 
-    if (!data || data.error) {
-      return NextResponse.json({ ok: false, error: "Bitrix24 request failed" }, { status: 500 });
+    if (!data || data.error || data.result === undefined || data.result === null) {
+      return finish({ ok: false, code: "submission_failed", error: "Не удалось подтвердить отправку. Не повторяйте заявку; свяжитесь с менеджером." }, 502);
     }
 
-    return NextResponse.json({ ok: true, bitrix_result: data.result });
+    return finish({ ok: true, bitrix_result: data.result, ...(isQuiz ? {
+      quote: { price_per_m2: effectiveBody.price_per_m2, estimate_min: effectiveBody.estimate_min,
+        estimate_max: effectiveBody.estimate_max, pricing_source: "google-sheets" },
+    } : {}) });
   } catch {
-    return NextResponse.json({ ok: false, error: "Bitrix24 request failed" }, { status: 500 });
+    return finish({ ok: false, code: "submission_failed", error: "Не удалось подтвердить отправку. Не повторяйте заявку; свяжитесь с менеджером." }, 502);
   }
 }
