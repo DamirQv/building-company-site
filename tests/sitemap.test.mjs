@@ -31,12 +31,12 @@ async function run(getPublishedNews) {
 }
 function checkStatic(entries) {
   const staticEntries = entries.filter(({ url }) => !url.includes("/blog/"));
-  assert.equal(staticEntries.length, 19);
+  assert.equal(staticEntries.length, 20);
   for (const entry of staticEntries) {
     assert.equal("lastModified" in entry, false);
     assert.equal(/\/(obekty|proekty)(\/|$)/.test(entry.url), false);
   }
-  for (const route of ["", "/kontakty", "/astana", "/otzyvy", "/blog"]) {
+  for (const route of ["", "/kontakty", "/astana", "/otzyvy", "/blog", "/uslugi/arhitekturnyy-interer"]) {
     assert.ok(entries.some(({ url }) => url === `https://standardstroy.kz${route}`));
   }
 }
@@ -46,7 +46,7 @@ test("published news uses source dates; invalid and static dates are omitted", a
     { slug: "article-without-date", publishedAt: "" },
   ]);
   checkStatic(entries);
-  assert.equal(entries.length, 21);
+  assert.equal(entries.length, 22);
   assert.equal(entries.find(({ url }) => url.endsWith("/controlled-article")).lastModified.toISOString(), "2026-11-01T10:00:00.000Z");
   assert.equal("lastModified" in entries.find(({ url }) => url.endsWith("/article-without-date")), false);
   assert.equal(errors.length, 0);
@@ -54,13 +54,13 @@ test("published news uses source dates; invalid and static dates are omitted", a
 test("empty source preserves static URLs", async () => {
   const { entries, errors } = await run(async () => []);
   checkStatic(entries);
-  assert.equal(entries.length, 19);
+  assert.equal(entries.length, 20);
   assert.equal(errors.length, 0);
 });
 test("timeout preserves static URLs with safe diagnostics", async () => {
   const { entries, errors } = await run(async () => { throw new BitrixNewsError(); });
   checkStatic(entries);
-  assert.equal(entries.length, 19);
+  assert.equal(entries.length, 20);
   assert.equal(errors.length, 1);
   assert.equal(errors[0][1].code, "timeout");
   assert.equal(errors[0][1].status, 504);

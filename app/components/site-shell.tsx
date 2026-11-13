@@ -20,6 +20,7 @@ const breadcrumbLabels: Record<string, string> = {
   "o-kompanii": "О компании",
   uslugi: "Услуги",
   proektirovanie: "Проектирование домов",
+  "arhitekturnyy-interer": "Архитектурный интерьер",
   "stroitelstvo-korobki": "Строительство коробки",
   "predchistovaya-otdelka": "Предчистовая отделка",
   "otdelka-pod-klyuch": "Отделка под ключ",

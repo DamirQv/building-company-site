@@ -19,6 +19,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: baseUrl, changeFrequency: "weekly", priority: 1 },
     { url: `${baseUrl}/uslugi`, changeFrequency: "monthly", priority: 0.9 },
     { url: `${baseUrl}/uslugi/proektirovanie`, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${baseUrl}/uslugi/arhitekturnyy-interer`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/uslugi/stroitelstvo-korobki`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/uslugi/predchistovaya-otdelka`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/uslugi/otdelka-pod-klyuch`, changeFrequency: "monthly", priority: 0.8 },
