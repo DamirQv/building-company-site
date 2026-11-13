@@ -13,7 +13,7 @@ const services = [
     slug: "proektirovanie",
     title: "Проектирование домов",
     description: "Эскизный проект, архитектурно-строительные чертежи, инженерные разделы. С учётом сейсмики Алматы и вашего бюджета.",
-    price: "от 2 000 ₸/м²",
+    price: "от 3 000 ₸/м²",
   },
   {
     slug: "stroitelstvo-korobki",
@@ -74,7 +74,7 @@ export default function UslugiPage() {
               <h2 className="text-xl font-semibold text-zinc-900">{service.title}</h2>
               <p className="mt-3 text-sm leading-7 text-zinc-600">{service.description}</p>
               <p className="mt-4 text-sm font-medium text-orange-500">{service.price}</p>
-              <p className="mt-4 text-sm text-orange-500 opacity-0 transition group-hover:opacity-100">
+              <p className="mt-4 text-sm text-orange-500">
                 Подробнее →
               </p>
             </Link>
