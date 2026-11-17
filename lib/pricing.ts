@@ -1,4 +1,5 @@
 import { unzipSync } from "fflate";
+import type { IncomingMessage } from "node:http";
 
 export type PricingEntry = {
   material: string;
@@ -105,7 +106,51 @@ class PricingError extends Error {
   }
 }
 
+async function fetchGoogleBinary(url: URL): Promise<Uint8Array> {
+  // This module also exports browser formatters. Load the Node transport only
+  // when the server actually requests prices (supported by production Node 22).
+  const https = process.getBuiltinModule("node:https");
+  const signal = AbortSignal.timeout(10_000); // One deadline for redirects AND body.
+  let current = url;
+  for (let redirects = 0; ; redirects += 1) {
+    if (current.protocol !== "https:" || current.username || current.password) {
+      throw new PricingError("invalid_format");
+    }
+    const response = await new Promise<IncomingMessage>((resolve, reject) => {
+      https.get(current, {
+        family: 4,
+        agent: false, // Do not reuse a socket or change the shared HTTPS agent.
+        signal,
+        headers: {
+          "User-Agent": BROWSER_UA,
+          Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,*/*;q=0.8",
+          "Accept-Encoding": "identity",
+        },
+      }, resolve).on("error", reject);
+    });
+    const status = response.statusCode ?? 0;
+    if ([301, 302, 303, 307, 308].includes(status)) {
+      response.destroy();
+      if (!response.headers.location || redirects >= 5) throw new PricingError("invalid_format");
+      try { current = new URL(response.headers.location, current); }
+      catch { throw new PricingError("invalid_format"); }
+      continue;
+    }
+    if (status < 200 || status >= 300) {
+      response.destroy();
+      throw new PricingError("http", status);
+    }
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of response) chunks.push(chunk);
+    return Buffer.concat(chunks);
+  }
+}
+
 async function fetchBinary(url: string): Promise<Uint8Array> {
+  const target = new URL(url);
+  if (target.hostname === "docs.google.com" || target.hostname.endsWith(".googleusercontent.com")) {
+    return fetchGoogleBinary(target);
+  }
   const res = await fetch(url, {
     cache: "no-store",
     signal: AbortSignal.timeout(10_000),

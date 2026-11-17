@@ -9,6 +9,10 @@ import vm from "node:vm";
 import test from "node:test";
 import ts from "typescript";
 import * as fflate from "fflate";
+import { EventEmitter } from "node:events";
+import { Readable, PassThrough } from "node:stream";
+import { getDefaultResultOrder } from "node:dns";
+import { getDefaultAutoSelectFamily } from "node:net";
 
 const root = new URL("../", import.meta.url);
 const code = (name) => ts.transpileModule(fs.readFileSync(new URL(name, root), "utf8"), {
@@ -25,13 +29,41 @@ function load(compiled, require, extra = {}) {
   vm.runInNewContext(compiled, { exports, require, ...extra });
   return exports;
 }
-function pricingHarness() {
-  const state = { body: csv(), status: 200, error: null, calls: [], logs: [], env: { GOOGLE_SHEETS_CSV_URL: "https://fixture.invalid/pricing" } };
+function pricingHarness({ timeout = (ms) => AbortSignal.timeout(ms) } = {}) {
+  const state = { body: csv(), status: 200, error: null, calls: [], logs: [], hops: [], responses: [], timeouts: [], env: { GOOGLE_SHEETS_CSV_URL: "https://fixture.invalid/pricing" } };
+  const get = (url, options, callback) => {
+    state.calls.push({ url: url.toString(), options, transport: "https" });
+    const request = new EventEmitter();
+    let response;
+    const cleanup = () => options.signal.removeEventListener("abort", abort);
+    const abort = () => {
+      const error = Object.assign(new Error("mock aborted"), { name: "AbortError" });
+      response?.destroy(error);
+      request.emit("error", error);
+      cleanup();
+    };
+    options.signal.addEventListener("abort", abort, { once: true });
+    queueMicrotask(() => {
+      if (options.signal.aborted) { abort(); return; }
+      if (state.error) { cleanup(); request.emit("error", state.error); return; }
+      const hop = state.hops.shift() ?? {};
+      if (hop.stall === "headers") return;
+      response = hop.stall === "body" ? new PassThrough() : Readable.from([Buffer.from(hop.body ?? state.body)]);
+      response.statusCode = hop.status ?? state.status;
+      response.headers = hop.location ? { location: hop.location } : {};
+      response.once("close", cleanup);
+      state.responses.push(response);
+      callback(response);
+    });
+    return request;
+  };
   const pricing = load(pricingCode, () => fflate, {
-    URL, URLSearchParams, TextDecoder, Uint8Array, AbortSignal, process: { env: state.env },
+    URL, URLSearchParams, TextDecoder, Uint8Array, Buffer,
+    AbortSignal: { timeout: (ms) => { state.timeouts.push(ms); return timeout(ms); } },
+    process: { env: state.env, getBuiltinModule: (id) => { assert.equal(id, "node:https"); return { get }; } },
     console: { warn: (...args) => state.logs.push(args) },
     fetch: async (url, options) => {
-      state.calls.push({ url, options });
+      state.calls.push({ url, options, transport: "fetch" });
       if (state.error) throw state.error;
       return new Response(state.body, { status: state.status });
     },
@@ -101,6 +133,75 @@ test("URL normalization retains hash gid and source priority", async () => {
   assert.equal(state.calls[1].url, "https://secondary.invalid/");
 });
 
+test("Google HTTPS forces IPv4 on every redirect with one 10-second deadline and no global changes", async () => {
+  const dnsBefore = getDefaultResultOrder();
+  const familyBefore = getDefaultAutoSelectFamily();
+  const { state, pricing } = pricingHarness();
+  state.env.GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/TEST/edit#gid=1";
+  state.hops = [301, 302, 303, 307, 308].map((status, i) => ({ status,
+    location: i === 0 ? "/redirect" : `https://fixture.googleusercontent.com/export?hop=${i}` }));
+  assert.equal((await pricing.getPricingData()).source, "google-sheets");
+  assert.equal(state.calls.length, 6);
+  assert.deepEqual(state.timeouts, [10000]);
+  for (const { options, transport } of state.calls) {
+    assert.equal(transport, "https");
+    assert.equal(options.family, 4);
+    assert.equal(options.agent, false);
+    assert.equal(options.headers["Accept-Encoding"], "identity");
+    assert.equal(options.signal, state.calls[0].options.signal);
+    assert.notEqual(options.rejectUnauthorized, false);
+  }
+  assert.equal(getDefaultResultOrder(), dnsBefore);
+  assert.equal(getDefaultAutoSelectFamily(), familyBefore);
+});
+
+for (const [name, hops, code] of [
+  ["HTTP failure", [{ status: 403 }], "http"],
+  ["incomplete CSV", [{ body: csv(rows.slice(0, 2)) }], "incomplete"],
+  ["duplicate CSV", [{ body: csv([...rows, rows[0]]) }], "duplicate"],
+  ["invalid CSV", [{ body: "<html>not a sheet</html>" }], "invalid_format"],
+  ["missing redirect target", [{ status: 302 }], "invalid_format"],
+  ["redirect loop", Array.from({ length: 6 }, () => ({ status: 302, location: "/loop" })), "invalid_format"],
+  ["HTTPS downgrade", [{ status: 302, location: "http://fixture.invalid" }], "invalid_format"],
+]) {
+  test(`IPv4 Google transport: ${name} preserves safe fallback`, async () => {
+    const { state, pricing } = pricingHarness();
+    state.env.GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/SECRET/export";
+    state.hops = hops;
+    const result = await pricing.getPricingData();
+    assert.equal(result.source, "default");
+    assert.equal(result.error, code);
+    assert.equal(result.pricing, pricing.DEFAULT_PRICING);
+    assert.equal(JSON.stringify(state.logs).includes("SECRET"), false);
+    assert.ok(state.responses.every((response) => response.destroyed));
+  });
+}
+
+for (const stall of ["headers", "body"]) {
+  test(`IPv4 Google transport: aborts stalled ${stall} and classifies timeout`, async () => {
+    const { state, pricing } = pricingHarness({ timeout: () => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 10);
+      return controller.signal;
+    } });
+    state.env.GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/TEST/export";
+    state.hops = [{ stall }];
+    const result = await pricing.getPricingData();
+    assert.equal(result.error, "timeout");
+    assert.equal(result.source, "default");
+    assert.deepEqual(state.timeouts, [10000]);
+    assert.ok(state.calls[0].options.signal.aborted);
+  });
+}
+
+test("non-Google source retains no-store fetch and its timeout", async () => {
+  const { state, pricing } = pricingHarness();
+  assert.equal((await pricing.getPricingData()).source, "google-sheets");
+  assert.equal(state.calls[0].transport, "fetch");
+  assert.equal(state.calls[0].options.cache, "no-store");
+  assert.deepEqual(state.timeouts, [10000]);
+});
+
 test("XLSX inline strings accept all six tariffs", async () => {
   const { state, pricing } = pricingHarness();
   const table = [["material", "almatyPricePerM2", "astanaPricePerM2"], ...rows];
@@ -152,6 +253,7 @@ async function leadHarness(t) {
 
 test("price changes twice: both confirmations recheck; only confirmed server sum reaches unchanged CRM fields", async (t) => {
   const h = await leadHarness(t);
+  h.state.env.GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/TEST/export";
   h.state.body = csv([["FinnBlock", 250000, 350000], ...rows.slice(1)]);
   let response = await h.post();
   assert.equal(response.status, 409);
